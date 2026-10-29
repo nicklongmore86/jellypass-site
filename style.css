@@ -206,3 +206,21 @@ code {
     padding-top: 2.25rem;
   }
 }
+
+/* TMDB's notice and logo (unmodified, and smaller than the JellyPass name, as TMDB's terms ask), with JustWatch's credit. */
+.credits {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.tmdb-logo-link {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.tmdb-logo {
+  display: block;
+  width: 7rem;
+  height: auto;
+}
