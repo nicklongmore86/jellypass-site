@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy – JellyPass</title>
+  <meta name="description" content="The JellyPass app's privacy policy: the developer collects nothing, and what the app stores and sends goes only to your household's own server, apart from film and series images loaded from TMDB.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/">About</a></li>
+          <li><a href="/privacy/" aria-current="page">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <h1>JellyPass privacy policy</h1>
+
+    <p class="updated">Last updated: 29 October 2026</p>
+
+    <p>JellyPass is an unofficial companion app for a JellyPass household server, which runs alongside a self-hosted Jellyfin media server. It is not affiliated with Jellyfin or Seerr.</p>
+
+    <h2>The short version</h2>
+
+    <ul>
+      <li><strong>The developer of JellyPass collects nothing.</strong> The app contains no analytics, no crash reporting, no advertising and no tracking, and it never sends anything to the developer.</li>
+      <li><strong>Everything the app sends goes only to the household server address you enter</strong>, apart from loading film and series images from TMDB (see below). That server is run by your household's administrator (the person who runs your Jellyfin), not by the developer of this app.</li>
+    </ul>
+
+    <h2>What the app stores on your device</h2>
+
+    <ul>
+      <li>Your household server address, your Jellyfin sign-in token, your user ID and your display name. These are kept in the iPhone/iPad Keychain or Android's encrypted secure storage, readable only by this app (on iPhone and iPad, only while the device is unlocked), and they are not synced or moved to another device; Android backup is turned off for this app.</li>
+      <li>A random device identifier, created once, so your household's Jellyfin can list this device.</li>
+      <li>Signing out deletes the stored sign-in.</li>
+    </ul>
+
+    <h2>What the app sends, and where</h2>
+
+    <p>All of the following is sent <strong>only to the household server you chose</strong>:</p>
+
+    <ul>
+      <li>your username and password, once, when you sign in (the app does not keep your password);</li>
+      <li>your sign-in token with each request;</li>
+      <li>the device's model name, platform, app version and the random device identifier, so the server can show this device in its Devices list;</li>
+      <li>what you browse, search for and ask for ("Get this"), and your requests.</li>
+    </ul>
+
+    <p>Posters, backdrops and logos are loaded by the app directly from TMDB's image server (<code>image.tmdb.org</code>). Like any image on the web, those requests show TMDB your device's IP address and which images were loaded; your sign-in token and account details are not sent with them.</p>
+
+    <p>The app does not use cookies.</p>
+
+    <h2>Data held by your household server</h2>
+
+    <p>Your account, your requests and your household's library are held by your household's server and its administrator. To see, change or delete that information, contact your household's administrator. The developer of this app has no access to it.</p>
+
+    <h2>Third-party content</h2>
+
+    <p>Film and series details and artwork are provided by <a href="https://www.themoviedb.org/">TMDB</a> and streaming availability by <a href="https://www.justwatch.com/">JustWatch</a>. Details and availability are fetched by your household server; artwork is loaded from TMDB as described above. Tapping their credit links opens their websites in your browser, where their own privacy policies apply. Playing a title opens your household's own Jellyfin.</p>
+
+    <h2>Children</h2>
+
+    <p>The app is not directed at children. Your household's administrator controls what each account can see.</p>
+
+    <h2>Changes</h2>
+
+    <p>If this policy changes, the new version will be posted on this page with a new date.</p>
+
+    <h2>Contact</h2>
+
+    <p>Questions about this policy: <a href="mailto:support@jellypass.app">support@jellypass.app</a>.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+    </div>
+  </footer>
+</body>
+</html>

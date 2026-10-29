@@ -1,0 +1,208 @@
+/* jellypass.app: one stylesheet for every page. System fonts only; nothing is loaded from another host. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --surface: #f3f4f8;
+  --text: #14161f;
+  --muted: #4a4f60;
+  --link: #5b2a86;
+  --link-hover: #3f1a60;
+  --rule: #d6d9e3;
+  --focus: #5b2a86;
+  --code-bg: #eceef5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000b25;
+    --surface: #0d1a3a;
+    --text: #e9ecf5;
+    --muted: #b4bbd0;
+    --link: #d4b3ff;
+    --link-hover: #ecdcff;
+    --rule: #26355c;
+    --focus: #d4b3ff;
+    --code-bg: #142249;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--link);
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: var(--link-hover);
+}
+
+a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -10rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  color: var(--link);
+  border: 2px solid var(--focus);
+  border-radius: 6px;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.wrap {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--rule);
+}
+
+.site-header .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 1.125rem;
+  text-decoration: none;
+}
+
+.brand img {
+  border-radius: 7px;
+}
+
+.site-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav a {
+  display: inline-block;
+  padding: 0.25rem 0;
+  text-decoration: none;
+}
+
+.site-nav a:hover,
+.site-nav a[aria-current="page"] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.site-nav a[aria-current="page"] {
+  color: var(--text);
+}
+
+main {
+  padding-top: 1.5rem;
+  padding-bottom: 2.5rem;
+}
+
+h1 {
+  font-size: 1.875rem;
+  line-height: 1.25;
+  margin: 0.5rem 0 1rem;
+}
+
+h2 {
+  font-size: 1.3125rem;
+  line-height: 1.3;
+  margin: 2rem 0 0.5rem;
+}
+
+p,
+ul {
+  margin: 0 0 1rem;
+}
+
+ul {
+  padding-left: 1.25rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  background: var(--code-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
+.updated {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.site-footer {
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.site-footer .wrap {
+  padding-top: 1.25rem;
+  padding-bottom: 1.5rem;
+}
+
+.site-footer p {
+  margin: 0 0 0.375rem;
+}
+
+@media (min-width: 40em) {
+  h1 {
+    font-size: 2.25rem;
+  }
+
+  main {
+    padding-top: 2.25rem;
+  }
+}
