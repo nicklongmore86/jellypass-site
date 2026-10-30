@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings reference – JellyPass docs</title>
+  <meta name="description" content="Every JellyPass setting: name, whether it is required, its default and what it does.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/" aria-current="page">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Settings reference</h1>
+
+      <p>JellyPass reads its settings from environment variables when it starts; with Compose, put them in <code>.env</code>. An invalid value stops startup with a message naming the setting, except <code>LOG_LEVEL</code>: an unrecognised level logs a warning and JellyPass uses <code>info</code>. Booleans take <code>true</code>, <code>false</code>, <code>1</code> or <code>0</code>.</p>
+
+      <h2 id="core">Connections and basics</h2>
+
+      <div class="table-scroll">
+      <table class="settings">
+        <thead><tr><th scope="col">Setting</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>JELLYFIN_URL</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>Jellyfin's base URL as JellyPass reaches it, such as <code>http://jellyfin:8096</code>.</td></tr>
+          <tr><th scope="row"><code>JELLYFIN_API_KEY</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>A Jellyfin administrator API key.</td></tr>
+          <tr><th scope="row"><code>WEBHOOK_TOKEN</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>Secret Seerr's webhook must send. Use a long random value.</td></tr>
+          <tr><th scope="row"><code>ADMIN_TOKEN</code></th><td data-label="Required">Recommended</td><td data-label="Default"><code>WEBHOOK_TOKEN</code></td><td>Bearer token for the admin API and <code>/metrics</code>. If unset, <code>WEBHOOK_TOKEN</code> is used (and a warning logged); use a different value.</td></tr>
+          <tr><th scope="row"><code>SEERR_URL</code></th><td data-label="Required">Set together</td><td data-label="Default">—</td><td>Seerr's base URL as JellyPass reaches it, such as <code>http://seerr:5055</code>.</td></tr>
+          <tr><th scope="row"><code>SEERR_API_KEY</code></th><td data-label="Required">Set together</td><td data-label="Default">—</td><td>Seerr API key. Startup stops if only one of the two is set.</td></tr>
+          <tr><th scope="row"><code>STATE_FILE</code></th><td data-label="Required">No</td><td data-label="Default"><code>./data/grants.json</code></td><td>The state file. The Compose file sets <code>/app/data/grants.json</code>.</td></tr>
+          <tr><th scope="row"><code>HOST</code></th><td data-label="Required">No</td><td data-label="Default"><code>0.0.0.0</code></td><td>Listen address inside the container.</td></tr>
+          <tr><th scope="row"><code>PORT</code></th><td data-label="Required">No</td><td data-label="Default"><code>8787</code></td><td>Listen port.</td></tr>
+          <tr><th scope="row"><code>RECONCILE_INTERVAL_SECONDS</code></th><td data-label="Required">No</td><td data-label="Default"><code>300</code></td><td>How often tags and policies are re-applied and retried. <code>0</code> disables; at most <code>86400</code>.</td></tr>
+          <tr><th scope="row"><code>CATALOG_SYNC_INTERVAL_SECONDS</code></th><td data-label="Required">No</td><td data-label="Default"><code>3600</code></td><td>How often the Library catalogue is refreshed from Jellyfin. <code>0</code> disables; at most <code>604800</code>.</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2 id="households">Household addresses and apps</h2>
+
+      <div class="table-scroll">
+      <table class="settings">
+        <thead><tr><th scope="col">Setting</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>HOUSEHOLD_DOMAIN</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Turns on household addresses below this domain.</td></tr>
+          <tr><th scope="row"><code>HOUSEHOLD_HOST_PREFIX</code></th><td data-label="Required">No</td><td data-label="Default"><code>jelly-</code></td><td>Put before each household ID: an address is <code>&lt;prefix&gt;&lt;household&gt;.&lt;domain&gt;</code>. 1 to 32 lowercase letters, digits and hyphens.</td></tr>
+          <tr><th scope="row"><code>HOUSEHOLD_APP_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>false</code></td><td>Serves the household web app at <code>/jellypass/app/</code> and its API, used by every JellyPass app. Needs <code>HOUSEHOLD_DOMAIN</code>, Seerr and <code>TMDB_API_KEY</code>. While on, at most 100 households.</td></tr>
+          <tr><th scope="row"><code>TMDB_API_KEY</code></th><td data-label="Required">With the app</td><td data-label="Default">—</td><td>TMDB v3 API key (32 hexadecimal characters) or v4 read access token. Checked at startup, never logged. Use a key for JellyPass alone.</td></tr>
+          <tr><th scope="row"><code>TV_ADDON_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>false</code></td><td>Adds the TV add-on to Jellyfin web on the households in <code>TV_ADDON_HOUSEHOLDS</code>. Needs <code>HOUSEHOLD_APP_ENABLED</code>.</td></tr>
+          <tr><th scope="row"><code>TV_ADDON_HOUSEHOLDS</code></th><td data-label="Required">With the add-on</td><td data-label="Default">—</td><td>Household IDs separated by commas, or <code>*</code> for all.</td></tr>
+          <tr><th scope="row"><code>WS_IDLE_TIMEOUT_MS</code></th><td data-label="Required">No</td><td data-label="Default"><code>300000</code></td><td>Closes a household WebSocket after this long with no traffic either way. <code>0</code> disables.</td></tr>
+          <tr><th scope="row"><code>WS_UPSTREAM_IDLE_TIMEOUT_MS</code></th><td data-label="Required">No</td><td data-label="Default"><code>180000</code></td><td>Closes a household WebSocket after this long with nothing from Jellyfin. <code>0</code> disables.</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2 id="other">Backfill, proxies and the rest</h2>
+
+      <div class="table-scroll">
+      <table class="settings">
+        <thead><tr><th scope="col">Setting</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>REQUEST_BACKFILL_SINCE</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Turns on the <a href="/docs/seerr-webhook/#backfill">request backfill</a> for requests created on or after this date: <code>YYYY-MM-DD</code> (UTC midnight) or an ISO 8601 date-time with <code>Z</code> or an offset.</td></tr>
+          <tr><th scope="row"><code>REQUEST_BACKFILL_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>true</code> when the date is set</td><td>Set <code>false</code> to pause the backfill. Needs Seerr and the date.</td></tr>
+          <tr><th scope="row"><code>TRUSTED_PROXIES</code></th><td data-label="Required">No</td><td data-label="Default">empty</td><td>Reverse proxies whose <code>X-Forwarded-For</code> is believed: IPv4/IPv6 addresses and CIDR ranges separated by commas, no ports. See <a href="/docs/reverse-proxy/#trusted-proxies">Reverse proxy</a>.</td></tr>
+          <tr><th scope="row"><code>JELLYFIN_UNTESTED_VERSION_OK</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>One exact Jellyfin version outside the supported releases, such as <code>13.0.0</code>, that counts as confirmed, so JellyPass doesn't warn about it (and, from 4.0.0, household addresses serve on it). New in 3.10.0.</td></tr>
+          <tr><th scope="row"><code>LOG_LEVEL</code></th><td data-label="Required">No</td><td data-label="Default"><code>info</code></td><td><code>debug</code>, <code>info</code>, <code>warn</code> or <code>error</code>. Only <code>debug</code> changes output today (routine disconnects and skipped backfill items).</td></tr>
+          <tr><th scope="row"><code>JELLYPASS_IMAGE</code></th><td data-label="Required">Compose only</td><td data-label="Default"><code>…/jellypass:latest</code></td><td>The image the Compose file runs. Pin a version.</td></tr>
+          <tr><th scope="row"><code>JELLYPASS_ENV_FILE</code></th><td data-label="Required">Compose only</td><td data-label="Default"><code>.env</code></td><td>Another settings file for the Compose file.</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2 id="minimal">A minimal <code>.env</code></h2>
+
+      <pre><code>JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:<var>X.Y.Z</var>
+JELLYFIN_URL=http://jellyfin:8096
+JELLYFIN_API_KEY=<var>jellyfin-admin-api-key</var>
+SEERR_URL=http://seerr:5055
+SEERR_API_KEY=<var>seerr-api-key</var>
+WEBHOOK_TOKEN=<var>long-random-secret</var>
+ADMIN_TOKEN=<var>different-long-random-secret</var>
+
+# Household addresses and the apps
+HOUSEHOLD_DOMAIN=example.com
+HOUSEHOLD_APP_ENABLED=true
+TMDB_API_KEY=<var>tmdb-key</var>
+TRUSTED_PROXIES=192.168.1.5</code></pre>
+
+      <p>The example settings file, <a href="https://github.com/nicklongmore86/jellypass/blob/main/.env.example"><code>.env.example</code></a>, lists the same settings with comments. The <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/server-reference.md">server reference</a> has every setting in full detail, with the administrator API and metrics.</p>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/configuration/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/reverse-proxy/"><span>Previous</span>Reverse proxy</a>
+        <a class="pager-next" href="/docs/seerr-webhook/"><span>Next</span>Seerr webhook</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

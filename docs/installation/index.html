@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation – JellyPass docs</title>
+  <meta name="description" content="Install JellyPass with Docker Compose: download the Compose file and settings, create the data folder, start it and sign in to the admin site.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/" aria-current="page">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Installation</h1>
+
+      <p>JellyPass runs as one container, published on GitHub Container Registry as <code>ghcr.io/nicklongmore86/jellypass</code>.</p>
+
+      <h2 id="compose">Docker Compose quick start</h2>
+
+      <ol class="steps">
+        <li>
+          <p>Make a folder and download the Compose file and the example settings:</p>
+      <pre><code>mkdir jellypass &amp;&amp; cd jellypass
+curl -LO https://raw.githubusercontent.com/nicklongmore86/jellypass/main/compose.yaml
+curl -Lo .env https://raw.githubusercontent.com/nicklongmore86/jellypass/main/.env.example</code></pre>
+        </li>
+        <li>
+          <p>Create the data folder. The container runs as user <code>node</code> (UID 1000), which must own it:</p>
+      <pre><code>mkdir -m 700 data
+sudo chown 1000:1000 data</code></pre>
+        </li>
+        <li>
+          <p>Edit <code>.env</code> and replace every placeholder. At least <code>JELLYFIN_URL</code>, <code>JELLYFIN_API_KEY</code>, <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>; see <a href="/docs/configuration/">Settings reference</a>. Make the two tokens different long random values:</p>
+      <pre><code>openssl rand -hex 32
+openssl rand -hex 32</code></pre>
+        </li>
+        <li>
+          <p>Pin a release instead of <code>latest</code>, which is rebuilt from the main branch and may hold unreleased changes. In <code>.env</code>, using the newest version from the <a href="https://github.com/nicklongmore86/jellypass/releases">releases page</a>:</p>
+      <pre><code>JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:<var>X.Y.Z</var></code></pre>
+        </li>
+        <li>
+          <p>Start it and check it is up:</p>
+      <pre><code>docker compose up -d
+docker compose ps
+curl http://127.0.0.1:8787/health</code></pre>
+          <p><code>/health</code> answers <code>{"status":"ok"}</code> once the process is running. It does not check Jellyfin or Seerr.</p>
+        </li>
+      </ol>
+
+      <p>The Compose file publishes JellyPass on <code>127.0.0.1:8787</code> only, which suits a reverse proxy on the same machine. Change the published address deliberately if Seerr or the proxy must reach it over your network. JellyPass listens on one port, <code>8787</code>, for everything: the admin site, the webhook and every household address.</p>
+
+      <h2 id="first-run">First sign-in</h2>
+
+      <ol>
+        <li>Open <code>http://127.0.0.1:8787/admin/</code> (or the admin address your proxy serves) and sign in with an enabled <strong>Jellyfin administrator</strong> account. JellyPass checks the password with Jellyfin and keeps only its own session, in memory, for 12 hours.</li>
+        <li>Run <strong>Sync library</strong> so the Library tab lists your titles. A sync does not make anything private.</li>
+        <li><a href="/docs/seerr-webhook/">Connect Seerr's webhook</a>.</li>
+        <li><a href="/docs/households/">Create your households</a>, then <a href="/docs/reverse-proxy/">publish their addresses</a>.</li>
+      </ol>
+
+      <h2 id="source">Build from source</h2>
+
+      <p>Clone the repository and run every command below inside it. The container runs as user 1000, so create the state directory first and give it to that user:</p>
+
+      <pre><code>git clone https://github.com/nicklongmore86/jellypass.git
+cd jellypass
+mkdir -m 700 data
+sudo chown 1000:1000 data
+cp .env.example .env
+# Edit .env.
+docker compose -f compose.example.yaml up --build -d</code></pre>
+
+      <p>Without Docker: Node.js 22 or later, then, inside the clone, <code>mkdir -m 700 data</code> (owned by the user that runs JellyPass), <code>corepack enable</code>, <code>pnpm install --frozen-lockfile</code>, <code>pnpm build</code> and <code>pnpm start</code>, with the settings in the environment.</p>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/installation/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/prerequisites/"><span>Previous</span>Prerequisites</a>
+        <a class="pager-next" href="/docs/reverse-proxy/"><span>Next</span>Reverse proxy</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

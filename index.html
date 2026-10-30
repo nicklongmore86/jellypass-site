@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JellyPass – your household's own space on a shared Jellyfin server</title>
-  <meta name="description" content="JellyPass gives each household on a shared Jellyfin server its own private space: browse your household's library, ask for new titles and follow your requests.">
+  <title>JellyPass – private households on one Jellyfin server</title>
+  <meta name="description" content="JellyPass is a free, open-source companion server for Jellyfin and Seerr: each household on a shared Jellyfin gets its own private library, its own address and private requests, with phone, web and TV apps.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -12,39 +12,84 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <div class="wrap">
+    <div class="wrap wide">
       <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
       <nav class="site-nav" aria-label="Site">
         <ul>
-          <li><a href="/" aria-current="page">About</a></li>
+          <li><a href="/docs/">Docs</a></li>
           <li><a href="/privacy/">Privacy</a></li>
           <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
-  <main id="main" class="wrap">
-    <h1>What is JellyPass?</h1>
+  <main id="main" class="landing">
+    <section class="hero">
+      <div class="wrap wide hero-inner">
+        <div class="hero-text">
+          <p class="eyebrow">Free and open source · for Jellyfin and Seerr</p>
+          <h1>One Jellyfin server. A private space for every household.</h1>
+          <p class="lead">JellyPass sits between your households and Jellyfin. Each household gets its own address, sees only its own members at sign-in, and asks for new titles through Seerr without anyone else learning what they asked for. Jellyfin stays in charge of playback; JellyPass keeps the households apart.</p>
+          <p class="actions">
+            <a class="button primary" href="/docs/">Get started</a>
+            <a class="button" href="https://github.com/nicklongmore86/jellypass">View on GitHub</a>
+          </p>
+        </div>
+        <figure class="hero-shot">
+          <img src="/img/app-search.png" alt="The JellyPass phone app's Search screen: one result is In library, another can be asked for with Get this." width="440" height="449">
+        </figure>
+      </div>
+    </section>
 
-    <p>JellyPass gives each household on a shared <a href="https://jellyfin.org/">Jellyfin</a> server its own private space.</p>
+    <section class="wrap wide features" aria-labelledby="features-title">
+      <h2 id="features-title">What it does</h2>
+      <ul class="feature-grid">
+        <li>
+          <h3>Household privacy on one Jellyfin</h3>
+          <p>Titles a household asks for are tagged private in Jellyfin and blocked for everyone outside that household, using Jellyfin's own blocked-tag policies. Administrators still see everything.</p>
+        </li>
+        <li>
+          <h3>Private requests through Seerr</h3>
+          <p>Members tap <strong>Get this</strong>. JellyPass makes the Seerr request as that member, and when it arrives only their household can see it. Nobody learns what another household asked for, or that they asked.</p>
+        </li>
+        <li>
+          <h3>A front door per household</h3>
+          <p>Each household gets its own address, such as <code>https://jelly-grove.example.com</code>. Its sign-in screen lists only its own members, with one-tap sign-in for members without a password.</p>
+        </li>
+        <li>
+          <h3>Phone, web and TV</h3>
+          <p>An app for iPhone, iPad and Android, an installable web app on every household address, and an optional add-on that brings Discover rows and requests into Jellyfin's TV interface.</p>
+        </li>
+        <li>
+          <h3>Admin tools</h3>
+          <p>A web admin site, signed in with your Jellyfin administrator account: households, members, grants, bulk access for existing titles, request approval and a catalogue of your library.</p>
+        </li>
+        <li>
+          <h3>Nothing phones home</h3>
+          <p>JellyPass runs on your own server and sends nothing to its developer. No analytics, no accounts with us. MIT licensed.</p>
+        </li>
+      </ul>
+    </section>
 
-    <ul>
-      <li><strong>Your household's library.</strong> Browse and search titles, and see at a glance what's ready to watch.</li>
-      <li><strong>Ask for something new.</strong> Tap <strong>Get this</strong> to ask your household's administrator to add a title, then follow it in <strong>My requests</strong>.</li>
-      <li><strong>Private between households.</strong> Other households can't see what you've asked for, and you can't see theirs.</li>
-      <li><strong>Watch in Jellyfin.</strong> Play opens the title in your household's own Jellyfin.</li>
-    </ul>
-
-    <p>JellyPass works with a <strong>JellyPass household server</strong>, which runs next to Jellyfin and Seerr. If someone has given you a JellyPass address (it looks like <code>https://jelly-yourhousehold.example.com</code>), enter it in the app to get started.</p>
-
-    <p>Running your own Jellyfin? JellyPass is open source: <a href="https://github.com/nicklongmore86/jellypass">github.com/nicklongmore86/jellypass</a>.</p>
-
-    <p>JellyPass is unofficial and not affiliated with Jellyfin or Seerr. Film and series data from TMDB; streaming availability from JustWatch.</p>
+    <section class="wrap wide split" aria-labelledby="who-title">
+      <h2 id="who-title" class="visually-hidden">Who it is for</h2>
+      <div class="card">
+        <h3>I run a Jellyfin server</h3>
+        <p>JellyPass runs in Docker next to Jellyfin and Seerr. You need Jellyfin 10.11 or 12, Seerr, a reverse proxy with HTTPS, and a domain for household addresses.</p>
+        <p><a href="/docs/installation/">Install JellyPass</a> · <a href="/docs/prerequisites/">Check the prerequisites</a></p>
+      </div>
+      <div class="card">
+        <h3>Someone gave me a JellyPass address</h3>
+        <p>Enter it in the JellyPass app, or open it in your browser and add <code>/jellypass/app/</code>. Sign in with your Jellyfin name and password.</p>
+        <p><a href="/docs/apps/">Get the apps</a> · <a href="/support/">Help signing in</a></p>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">
+    <div class="wrap wide">
       <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
       <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
       <div class="credits">

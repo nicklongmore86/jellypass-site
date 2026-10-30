@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troubleshooting and FAQ – JellyPass docs</title>
+  <meta name="description" content="Fixes for common JellyPass problems: startup errors, missing grants, webhooks, household addresses, and frequently asked questions.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/" aria-current="page">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Troubleshooting and FAQ</h1>
+
+      <p>Start with the logs and the health check:</p>
+
+      <pre><code>docker compose logs --tail=100 jellypass
+curl http://127.0.0.1:8787/health</code></pre>
+
+      <h2 id="eacces">The container stops with <code>EACCES: permission denied</code></h2>
+
+      <p>The container runs as UID 1000 and can't write the data folder. Run <code>sudo chown 1000:1000 data</code> and start it again.</p>
+
+      <h2 id="startup">The container stops with a settings error</h2>
+
+      <p>JellyPass checks its settings at startup and names the one that is wrong, for example <code>SEERR_URL and SEERR_API_KEY must be configured together</code>, or a missing <code>TMDB_API_KEY</code> while <code>HOUSEHOLD_APP_ENABLED</code> is on. See the <a href="/docs/configuration/">Settings reference</a>.</p>
+
+      <h2 id="not-private">A new title is in Library but not in Grants</h2>
+
+      <p>A title becomes private only when Seerr's webhook arrives, the backfill finds its request, or an administrator assigns it. Common causes: it was downloaded outside Seerr, it replaced media Seerr already had, it arrived before the webhook was set up, the requester's Seerr account isn't linked to Jellyfin, or the webhook is off, filtered to the wrong event, unreachable or using the wrong token. Assign it from <strong>Library</strong>, and set up the <a href="/docs/seerr-webhook/#backfill">backfill</a>.</p>
+
+      <h2 id="webhook-401">The webhook gets <code>401</code></h2>
+
+      <p>The bearer header or <code>?token=</code> doesn't exactly match <code>WEBHOOK_TOKEN</code>. Check for copied whitespace.</p>
+
+      <h2 id="webhook-ids">The webhook reports missing Jellyfin IDs</h2>
+
+      <p>Set <code>SEERR_URL</code> and <code>SEERR_API_KEY</code> and use the request-ID-only payload, and make sure the requester was imported from Jellyfin.</p>
+
+      <h2 id="household-404">A household address answers <code>404</code></h2>
+
+      <p>Check that the household exists, that its ID is lowercase letters, numbers and hyphens, that <code>HOUSEHOLD_DOMAIN</code> and <code>HOUSEHOLD_HOST_PREFIX</code> match the address, and that the proxy passes the original <code>Host</code>.</p>
+
+      <h2 id="jellyfin-version">The admin site says this is not a tested Jellyfin version</h2>
+
+      <p>Jellyfin runs a version JellyPass doesn't support, or JellyPass can't read Jellyfin's version yet. In 3.x household addresses keep serving; JellyPass only warns until an administrator confirms that exact version. From 4.0.0, household addresses will answer <code>503</code> until then. See <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>.</p>
+
+      <h2 id="admin-instead">A household address shows the JellyPass admin sign-in</h2>
+
+      <p>The name reaching JellyPass isn't a household address, so JellyPass treats it as the admin site. Check the prefix and domain settings, and that the proxy passes <code>Host</code> unchanged.</p>
+
+      <h2 id="library-empty">The Library tab is empty or out of date</h2>
+
+      <p>Check that JellyPass can reach Jellyfin and that the API key is an administrator's, then run <strong>Sync library</strong>. <code>CATALOG_SYNC_INTERVAL_SECONDS=0</code> turns off automatic syncs.</p>
+
+      <h2 id="changes">Changes don't reach every user</h2>
+
+      <p>In <strong>Grants</strong>, preview a reconciliation, check the changes and apply them. New Jellyfin users are covered at the next reconciliation.</p>
+
+      <h2 id="faq">FAQ</h2>
+
+      <dl class="faq">
+        <dt>Does a sync make my whole library private?</dt>
+        <dd>No. The catalogue is only an inventory. Titles become private through a request or an administrator.</dd>
+        <dt>Can a member see what another household asked for?</dt>
+        <dd>No. The apps never show who asked for a title or which household has it, and a title another household holds looks the same as one nobody has.</dd>
+        <dt>Do I need the apps?</dt>
+        <dd>No. Members can keep requesting in Seerr and watching in any Jellyfin app on their household address. The apps add Get this, My requests and discovery.</dd>
+        <dt>Does it support request quotas?</dt>
+        <dd>Not in the apps: a member with a Seerr request quota sees titles as "Can't request" and can still use Seerr.</dd>
+        <dt>Can I use more than 100 households?</dt>
+        <dd>Only with the household app off.</dd>
+        <dt>Where do I report a bug?</dt>
+        <dd>In <a href="https://github.com/nicklongmore86/jellypass/issues">GitHub issues</a>. Report security problems privately (see <a href="/docs/security/">Security</a>).</dd>
+      </dl>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/troubleshooting/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/upgrading/"><span>Previous</span>Upgrading and rollback</a>
+        <a class="pager-next" href="/docs/security/"><span>Next</span>Security</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

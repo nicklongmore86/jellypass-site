@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Introduction – JellyPass docs</title>
+  <meta name="description" content="What JellyPass is, how it keeps households apart on one Jellyfin server, and what it does not do.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/" aria-current="page">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Introduction</h1>
+
+      <p class="lead">JellyPass is a small server that runs next to <a href="https://jellyfin.org/">Jellyfin</a> and <a href="https://github.com/seerr-team/seerr">Seerr</a>. It lets several households share one Jellyfin server while each keeps its own requests private.</p>
+
+      <p>These pages describe JellyPass 3.x. They cover installing the server, putting it behind a reverse proxy, connecting Seerr, setting up households, and the apps members use.</p>
+
+      <h2 id="how-it-works">How it works</h2>
+
+      <ol>
+        <li><strong>A household asks for a title.</strong> A member asks for it in Seerr, or taps <strong>Get this</strong> in a JellyPass app, which makes the Seerr request as that member.</li>
+        <li><strong>Seerr gets it.</strong> When the title is available, Seerr sends JellyPass a webhook.</li>
+        <li><strong>JellyPass makes it private.</strong> It gives the Jellyfin item a private tag (one per title, such as <code>jfa:private:8f…</code>) and adds that tag to the <em>blocked tags</em> of every non-administrator Jellyfin user outside the requester's household. Everyone in the requester's household (every group they belong to) can see it; nobody else can.</li>
+        <li><strong>It keeps it that way.</strong> JellyPass saves what it decided in its state file and reconciles Jellyfin with it regularly, so new users and transient failures are corrected.</li>
+      </ol>
+
+      <p>Administrators are never blocked. Titles JellyPass has never been told about stay as Jellyfin's own policies leave them, so your existing library does not suddenly disappear.</p>
+
+      <h2 id="households">Households and their addresses</h2>
+
+      <p>A household is a group of Jellyfin users in the JellyPass admin site. With household addresses switched on, each household gets its own HTTPS address, for example <code>https://jelly-grove.example.com</code>. On that address JellyPass passes traffic through to Jellyfin, but:</p>
+
+      <ul>
+        <li>the sign-in screen lists only that household's members, and only they can sign in there;</li>
+        <li>Quick Connect is switched off, and requests that would reach another user's data or a title the member may not see are refused;</li>
+        <li>the household web app and its API are served, if you enable them.</li>
+      </ul>
+
+      <p>Any Jellyfin client works with a household address: Jellyfin web, the Jellyfin apps and the JellyPass apps. See <a href="/docs/households/">Households and members</a>.</p>
+
+      <h2 id="not">What JellyPass does not do</h2>
+
+      <ul>
+        <li>It does not replace Jellyfin sign-in or permissions. Jellyfin still decides who may play what; JellyPass sets the policies Jellyfin enforces.</li>
+        <li>It does not download anything or decide whether a request is approved. That is Seerr's job.</li>
+        <li>It does not cover access outside Jellyfin's API, such as direct file shares or DLNA.</li>
+        <li>Series are protected as a whole, not season by season.</li>
+      </ul>
+
+      <div class="callout warning">
+        <p><strong>Test first.</strong> JellyPass changes Jellyfin item tags and whole user policies. Try it with non-critical users and media, keep a backup of its state file, and keep a separate way to reach Jellyfin as an administrator.</p>
+      </div>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-next" href="/docs/prerequisites/"><span>Next</span>Prerequisites</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

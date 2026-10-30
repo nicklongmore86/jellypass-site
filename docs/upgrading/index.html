@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upgrading and rollback – JellyPass docs</title>
+  <meta name="description" content="Upgrade JellyPass safely: back up the state file, pin a version, read the release notes, roll back, and Jellyfin version support.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/" aria-current="page">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Upgrading and rollback</h1>
+
+      <h2 id="upgrade">Upgrade</h2>
+
+      <ol>
+        <li>Read the release notes in the <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md">changelog</a> for every version between yours and the new one. Each says whether the state file or any setting changes.</li>
+        <li>Back up the state file:
+      <pre><code>docker compose stop jellypass
+cp -p data/grants.json data/grants.json.backup
+docker compose start jellypass</code></pre></li>
+        <li>Set <code>JELLYPASS_IMAGE</code> in <code>.env</code> to the new version, then:
+      <pre><code>docker compose pull
+docker compose up -d
+curl http://127.0.0.1:8787/health</code></pre></li>
+      </ol>
+
+      <p>Each release is published as <code>X.Y.Z</code>, plus <code>X.Y</code> and <code>X</code> tags that move to the newest release in that line. <code>latest</code> follows the main branch and may contain unreleased changes. Restarting JellyPass signs administrators out of the admin site.</p>
+
+      <h2 id="rollback">Roll back</h2>
+
+      <pre><code>JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:<var>PREVIOUS_VERSION</var> docker compose up -d</code></pre>
+
+      <p>An upgrade can move the state file to a schema older versions can't read; then restore the backup you took before upgrading. If you use the household app, check the admin-only <code>GET /v1/app/outstanding</code> first and roll back only once it answers <code>"clear": true</code>; the changelog explains how to drain it.</p>
+
+      <h2 id="backup">Backup and restore</h2>
+
+      <p>The state file is the only data JellyPass needs to keep. Back up Jellyfin separately: JellyPass is not a backup of Jellyfin's users or policies. To restore, stop JellyPass, put the backup in place (owned by UID 1000), start it, then preview and apply a reconciliation in <strong>Grants</strong>.</p>
+
+      <h2 id="jellyfin-versions">Jellyfin versions</h2>
+
+      <p>JellyPass supports the current Jellyfin release and the one before it: <strong>Jellyfin 12.x and 10.11.x</strong>. It reads Jellyfin's version at startup and every five minutes. From 3.10.0, any other version (an older 10.x, a future 13.0, or any build whose version has a suffix, such as <code>12.5.0-rc1</code>) is <strong>unconfirmed</strong> until an administrator confirms it. On an unconfirmed version, or while JellyPass can't read the version:</p>
+
+      <ul>
+        <li>in JellyPass 3.x, household addresses <strong>keep serving</strong> as before;</li>
+        <li>JellyPass logs a warning once for each version, the admin site shows a notice that this is not a tested Jellyfin version, and <code>GET /v1/jellyfin/version</code> reports <code>"confirmation": "unconfirmed"</code> and <code>"enforcement": "warn"</code>;</li>
+        <li>an administrator confirms that exact version with <strong>Allow Jellyfin X</strong> in the admin site, or with <code>JELLYFIN_UNTESTED_VERSION_OK</code>, which clears the warning. Confirm a version only once you are satisfied JellyPass's household privacy checks hold on it, since they were written for the supported versions. A later upgrade to another untested version warns again.</li>
+      </ul>
+
+      <p><strong>JellyPass 4.0.0 will refuse</strong> household requests on an unconfirmed version: household addresses will answer <code>503</code> and pass nothing to Jellyfin until that exact version is confirmed, and also while the version can't be read. The admin site, webhooks and grants keep working either way.</p>
+
+      <p>Check JellyPass's release notes before upgrading Jellyfin to a new major version.</p>
+
+      <h2 id="next">Coming in 4.0</h2>
+
+      <p>JellyPass 4.0 is in development and will be a breaking release, including moving the admin site to a listener of its own. It will come with upgrade notes; these pages describe 3.x.</p>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/upgrading/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/apps/"><span>Previous</span>Phone, web and TV apps</a>
+        <a class="pager-next" href="/docs/troubleshooting/"><span>Next</span>Troubleshooting and FAQ</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
