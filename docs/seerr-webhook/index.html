@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seerr webhook – JellyPass docs</title>
+  <meta name="description" content="Connect Seerr to JellyPass: the webhook URL, authorization header and payload, how to test it, and the request backfill.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/" aria-current="page">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Seerr webhook</h1>
+
+      <p>Seerr tells JellyPass when a requested title becomes available. That webhook is what makes a title private to the requester's household.</p>
+
+      <p>The requester's Seerr account must be imported from or linked to Jellyfin; a local-only Seerr account has no Jellyfin user to grant. Jellyseerr works too: it uses the same webhook agent and API.</p>
+
+      <h2 id="setup">Set it up</h2>
+
+      <p>In Seerr, <strong>Settings → Notifications → Webhook</strong>:</p>
+
+      <ol>
+        <li>Enable the webhook agent.</li>
+        <li>Select only <strong>Request Available</strong>.</li>
+        <li>Webhook URL: <code>http://jellypass:8787/webhooks/seerr</code> on a shared Docker network, or JellyPass's address as Seerr reaches it.</li>
+        <li>Authorization header: <code>Bearer <var>your WEBHOOK_TOKEN</var></code>. If your Seerr version has no header field, add <code>?token=<var>your WEBHOOK_TOKEN</var></code> to the URL instead; a token in a URL can end up in logs, so keep that route private.</li>
+        <li>JSON payload: paste the template below, in Seerr's own form, and save. Don't write it into Seerr's <code>settings.json</code> by hand: Seerr stores it in its own encoding.</li>
+      </ol>
+
+      <pre><code>{
+        "notificationType": "{{notification_type}}",
+        "event": "{{event}}",
+        "media": {
+          "jellyfinMediaId": "{{media_jellyfinMediaId}}",
+          "mediaType": "{{media_type}}"
+        },
+        "request": {
+          "id": "{{request_id}}",
+          "requestedBy": {
+            "jellyfinUserId": "{{requestedBy_jellyfinUserId}}",
+            "username": "{{requestedBy_username}}"
+          }
+        }
+      }</code></pre>
+
+      <p>With <code>SEERR_URL</code> and <code>SEERR_API_KEY</code> set, JellyPass can look the request up itself, so this smaller payload is enough (needed for some Jellyseerr releases that have no Jellyfin ID variables):</p>
+
+      <pre><code>{
+        "notificationType": "{{notification_type}}",
+        "request": { "id": "{{request_id}}" }
+      }</code></pre>
+
+      <p>4K requests need Seerr configured: Seerr's template has no 4K item ID, so JellyPass asks Seerr which item to protect.</p>
+
+      <h2 id="test">Test it</h2>
+
+      <p>Use Seerr's <strong>Test</strong> button. A test notification gets <code>202 {"status":"ignored"}</code>, which proves JellyPass is reachable and the token is right, not that the payload is. After a real title arrives, check the admin site's <strong>Grants</strong> tab, or <code>/metrics</code> (with <code>ADMIN_TOKEN</code>):</p>
+
+      <ul>
+        <li><code>jfa_last_webhook_received_timestamp_seconds</code>: when the last accepted webhook arrived.</li>
+        <li><code>jfa_webhooks_total{result="invalid"}</code>: webhooks whose payload was malformed; re-save the payload in Seerr's form.</li>
+        <li><code>jfa_webhooks_total{result="error"}</code>: valid webhooks JellyPass could not apply; the reason is logged.</li>
+      </ul>
+
+      <h2 id="backfill">Request backfill</h2>
+
+      <p>Some Seerr releases miss webhooks. The backfill picks up what they missed: set <code>REQUEST_BACKFILL_SINCE</code> to the date you start relying on JellyPass, and it pages through Seerr's requests about five seconds after startup and before each reconciliation. It grants requests that were created on or after that date, approved or completed, available in Jellyfin, and made by a Jellyfin-linked user.</p>
+
+      <pre><code>REQUEST_BACKFILL_SINCE=2026-10-01</code></pre>
+
+      <p>Don't set an early date: titles that were public before JellyPass managed them should stay public. The backfill never re-grants a request it or the webhook already handled, nor one an administrator revoked.</p>
+
+      <h2 id="existing">Titles you already have</h2>
+
+      <p>Seerr does not send a webhook for titles that were available before JellyPass, manual downloads or upgrades. To make those private, select them in the admin site's <strong>Library</strong> tab and assign users or households (up to 500 at a time).</p>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/seerr-webhook/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/configuration/"><span>Previous</span>Settings reference</a>
+        <a class="pager-next" href="/docs/households/"><span>Next</span>Households and members</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

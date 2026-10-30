@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prerequisites – JellyPass docs</title>
+  <meta name="description" content="What you need before installing JellyPass: Jellyfin 12.x or 10.11.x, Seerr, Docker, a reverse proxy with TLS, and a TMDB key for the apps.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/" aria-current="page">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Prerequisites</h1>
+
+      <table>
+        <caption class="visually-hidden">What JellyPass needs</caption>
+        <thead><tr><th scope="col">You need</th><th scope="col">Details</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Jellyfin 12.x or 10.11.x</th><td>JellyPass supports the current Jellyfin release and the one before it, and tests both against a real Jellyfin before each release. On any other version, household addresses pause until an administrator allows that exact version (see <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>).</td></tr>
+          <tr><th scope="row">A Jellyfin administrator API key</th><td>Jellyfin <strong>Dashboard → API Keys</strong>. Only administrators can change item tags and user policies.</td></tr>
+          <tr><th scope="row">Seerr</th><td>Seerr, or Jellyseerr, with users imported from or linked to Jellyfin; it sends JellyPass the webhook. Overseerr on its own supports only Plex and does not work. Giving JellyPass Seerr's API key as well is needed for the apps, the request backfill, 4K requests and the short webhook payload.</td></tr>
+          <tr><th scope="row">Docker with Compose v2</th><td>The recommended install. Images are published for <code>linux/amd64</code> and <code>linux/arm64</code>. You can also run it from source with Node.js 22 or later and pnpm.</td></tr>
+          <tr><th scope="row">A reverse proxy with HTTPS</th><td>For household addresses: a domain you control, DNS for each household name (or a wildcard), and a certificate covering them. See <a href="/docs/reverse-proxy/">Reverse proxy</a>.</td></tr>
+          <tr><th scope="row">A TMDB API key</th><td>Only for the household apps, which read titles, posters and details from <a href="https://www.themoviedb.org/">TMDB</a>. A v3 API key or a v4 read access token from your TMDB account's API settings. Read TMDB's <a href="https://www.themoviedb.org/api-terms-of-use">API terms</a>.</td></tr>
+          <tr><th scope="row">Somewhere private for the state file</th><td>One JSON file (<code>grants.json</code>) holds everything JellyPass decides. It contains Jellyfin user IDs and media names; keep it private and back it up.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="network">Network</h2>
+
+      <ul>
+        <li>JellyPass must reach Jellyfin and Seerr. Inside Docker, <code>localhost</code> is the JellyPass container itself: use a shared Docker network and service names (<code>http://jellyfin:8096</code>), or a LAN address such as <code>http://192.168.1.20:8096</code>.</li>
+        <li>Seerr must reach JellyPass's webhook, <code>/webhooks/seerr</code>.</li>
+        <li>Members reach household addresses through your reverse proxy. Administrators reach the admin site, which should not be public (see <a href="/docs/security/">Security</a>).</li>
+      </ul>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/prerequisites/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/"><span>Previous</span>Introduction</a>
+        <a class="pager-next" href="/docs/installation/"><span>Next</span>Installation</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

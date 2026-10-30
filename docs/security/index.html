@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security – JellyPass docs</title>
+  <meta name="description" content="How to run JellyPass safely: keep the admin site private, use separate tokens, protect the state file, and report vulnerabilities privately.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/" aria-current="page">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Security</h1>
+
+      <h2 id="admin">Keep the admin site private</h2>
+
+      <p><strong>The admin site is not gated by default.</strong> Anyone who can reach it can try to sign in with a Jellyfin administrator's name and password, and the admin API answers anyone holding <code>ADMIN_TOKEN</code>. JellyPass limits sign-in attempts, but:</p>
+
+      <ul>
+        <li>give the admin site a name of its own, not a household address or Seerr's;</li>
+        <li>keep it on your LAN, or put it behind an identity-aware gate, a VPN or an IP allowlist at your proxy (see the <a href="/docs/reverse-proxy/#examples">proxy examples</a>);</li>
+        <li>in 3.x, forward only household names to JellyPass from the internet: any other name reaching it is answered as the admin site.</li>
+      </ul>
+
+      <h2 id="tokens">Tokens and keys</h2>
+
+      <ul>
+        <li>Use different long random values for <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>. If <code>ADMIN_TOKEN</code> is unset, the webhook token also unlocks the admin API.</li>
+        <li>Keep Jellyfin, Seerr and TMDB keys out of Git, screenshots and support requests. JellyPass never logs passwords, Jellyfin tokens, the Jellyfin API key or webhook tokens.</li>
+        <li>Prefer the webhook's <code>Authorization</code> header to <code>?token=</code>, which can appear in logs.</li>
+      </ul>
+
+      <h2 id="data">The state file</h2>
+
+      <p>It holds grants, households, Jellyfin user IDs and a catalogue of media names. JellyPass creates it readable by its owner only; keep backups just as private.</p>
+
+      <h2 id="proxy">Behind the proxy</h2>
+
+      <ul>
+        <li>Serve household and admin traffic over HTTPS, and don't publish JellyPass's port directly to untrusted networks.</li>
+        <li>Set <code>TRUSTED_PROXIES</code> to your proxies only.</li>
+        <li>Keep a separate way to reach Jellyfin as an administrator that doesn't go through a household address.</li>
+      </ul>
+
+      <h2 id="sessions">Administrator sessions</h2>
+
+      <p>The admin site signs in with Jellyfin: the password goes to Jellyfin, the temporary Jellyfin session is closed at once, and JellyPass keeps its own session in memory for 12 hours. Every five minutes it checks the administrator is still an enabled Jellyfin administrator. Restarting JellyPass signs everyone out.</p>
+
+      <h2 id="report">Reporting a vulnerability</h2>
+
+      <p>Please report security problems privately through <a href="https://github.com/nicklongmore86/jellypass/security/advisories/new">GitHub security advisories</a>, not in a public issue. Fixes go to the latest release line; pin a version and read release notes before upgrading.</p>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/security/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/troubleshooting/"><span>Previous</span>Troubleshooting and FAQ</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

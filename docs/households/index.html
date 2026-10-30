@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Households and members – JellyPass docs</title>
+  <meta name="description" content="Create households in the JellyPass admin site, give each its own address, add members, and mark members for one-tap sign-in.">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap wide">
+      <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28">JellyPass</a>
+      <nav class="site-nav" aria-label="Site">
+        <ul>
+          <li><a href="/docs/" aria-current="page">Docs</a></li>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="https://github.com/nicklongmore86/jellypass">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs wrap wide">
+    <nav class="docs-nav" aria-label="Documentation">
+      <p class="docs-nav-title">Documentation</p>
+      <p class="docs-nav-group">Getting started</p>
+      <ul>
+        <li><a href="/docs/">Introduction</a></li>
+        <li><a href="/docs/prerequisites/">Prerequisites</a></li>
+        <li><a href="/docs/installation/">Installation</a></li>
+        <li><a href="/docs/reverse-proxy/">Reverse proxy</a></li>
+      </ul>
+      <p class="docs-nav-group">Configuration</p>
+      <ul>
+        <li><a href="/docs/configuration/">Settings reference</a></li>
+        <li><a href="/docs/seerr-webhook/">Seerr webhook</a></li>
+        <li><a href="/docs/households/" aria-current="page">Households and members</a></li>
+      </ul>
+      <p class="docs-nav-group">Apps</p>
+      <ul>
+        <li><a href="/docs/apps/">Phone, web and TV apps</a></li>
+      </ul>
+      <p class="docs-nav-group">Running it</p>
+      <ul>
+        <li><a href="/docs/upgrading/">Upgrading and rollback</a></li>
+        <li><a href="/docs/troubleshooting/">Troubleshooting and FAQ</a></li>
+        <li><a href="/docs/security/">Security</a></li>
+      </ul>
+    </nav>
+
+    <main id="main" class="docs-main">
+      <h1>Households and members</h1>
+
+      <p>A household is a group in the JellyPass admin site: an ID, a name and a list of Jellyfin users. Requests made by a member are shared with every household they belong to.</p>
+
+      <h2 id="admin">The admin site</h2>
+
+      <p>Sign in at <code>/admin/</code> with a Jellyfin administrator account. Its tabs:</p>
+
+      <ul>
+        <li><strong>Dashboard</strong>: grant counts, sync health and recent Seerr requests.</li>
+        <li><strong>Requests</strong> (with the household app on): every household's app requests, with <strong>Approve</strong>, <strong>Decline</strong> and <strong>Cancel request</strong>, and titles a cancel left held for no household.</li>
+        <li><strong>Library</strong>: your Jellyfin catalogue, with bulk access for up to 500 titles.</li>
+        <li><strong>Grants</strong>: the titles JellyPass protects, who can see each, previews of what reconciliation would change, revoke and move.</li>
+        <li><strong>Groups</strong>: households, their members and addresses; Jellyfin users can be created or imported here.</li>
+      </ul>
+
+      <h2 id="create">Create a household</h2>
+
+      <ol>
+        <li>In <strong>Groups</strong>, create a group. Its ID becomes part of the household's address, so use lowercase letters, numbers and hyphens, at most 63 characters (for example <code>grove</code>).</li>
+        <li>Add its members: existing Jellyfin users, or new non-administrator users created here (optionally imported into Seerr too).</li>
+        <li>Optionally, under <strong>One-tap sign-in</strong>, mark members whose Jellyfin account has no password: on their household's address they sign in with one tap. Marking a member who does have a password stops them signing in there. A Jellyfin account without a password can be used by anyone who reaches Jellyfin and knows its name, so use it only where that is fine.</li>
+      </ol>
+
+      <p>Joining a household later does not change older grants. Add the household to those titles in <strong>Grants</strong>, or add the member to a household already assigned.</p>
+
+      <h2 id="addresses">Household addresses</h2>
+
+      <p>With <code>HOUSEHOLD_DOMAIN</code> set, each household's address is:</p>
+
+      <pre><code>https://&lt;prefix&gt;&lt;household-id&gt;.&lt;HOUSEHOLD_DOMAIN&gt;</code></pre>
+
+      <p>The prefix is <code>HOUSEHOLD_HOST_PREFIX</code>, <code>jelly-</code> unless you change it. With <code>HOUSEHOLD_DOMAIN=example.com</code>, household <code>grove</code> is <code>https://jelly-grove.example.com</code>; with the prefix set to <code>media-</code> it is <code>https://media-grove.example.com</code>. The Groups tab shows each household's address. An address no household has answers <code>404</code>.</p>
+
+      <p>Give members their household's address. They use it as the server address in any Jellyfin app, in the JellyPass app, and for the web app at <code>/jellypass/app/</code>. The JellyPass phone app also opens setup links such as <code>jellypass://connect?address=https://jelly-grove.example.com</code>, which fill the address in (and only that).</p>
+
+      <h2 id="on-the-address">What a household address changes</h2>
+
+      <ul>
+        <li>The sign-in screen lists only the household's visible members, and only members of that household can sign in there. Hidden members use Jellyfin's <strong>Manual Login</strong>.</li>
+        <li>Quick Connect is unavailable, since it would skip the membership check.</li>
+        <li>Every request that names a title is checked with Jellyfin, as the caller, before it is passed on; a request about another user, or a title the caller can't see, is refused.</li>
+        <li>Some plugin routes that would leak other households' requests or settings (parts of Streamyfin and Jellyfin Enhanced) are refused.</li>
+      </ul>
+
+      <p>Filtering the sign-in list is about privacy and convenience, not authentication: members still sign in with Jellyfin, and Jellyfin's own policies still apply. Keep a separate, non-household way to reach Jellyfin as an administrator.</p>
+
+      <h2 id="sharing">Sharing a title with another household</h2>
+
+      <p>Households can't see each other's requests, but a household can get a title another household asked for: <strong>Get this</strong> in an app adds their household to that title, without telling them who has it. This applies to titles that came from a request; titles an administrator assigned by hand, and households an administrator removed from a title, are left as the administrator set them. Administrators can assign households to any title in <strong>Grants</strong> or <strong>Library</strong>.</p>
+
+      <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/households/index.html">Edit this page on GitHub</a></p>
+      <nav class="pager" aria-label="Previous and next page">
+        <a class="pager-prev" href="/docs/seerr-webhook/"><span>Previous</span>Seerr webhook</a>
+        <a class="pager-next" href="/docs/apps/"><span>Next</span>Phone, web and TV apps</a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap wide">
+      <p>Unofficial; not affiliated with Jellyfin or Seerr.</p>
+      <p>Contact: <a href="mailto:support@jellypass.app">support@jellypass.app</a></p>
+      <div class="credits">
+        <a class="tmdb-logo-link" href="https://www.themoviedb.org/"><img class="tmdb-logo" src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width="112" height="15"></a>
+        <p>This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        <p>Streaming availability from <a href="https://www.justwatch.com/">JustWatch</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
