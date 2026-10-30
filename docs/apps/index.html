@@ -56,10 +56,10 @@
     <main id="main" class="docs-main">
       <h1>Phone, web and TV apps</h1>
 
-      <p>Members browse what's new, see what their household already has, tap <strong>Get this</strong> and follow <strong>My requests</strong>. Every app talks only to the household's own address and signs in with Jellyfin. All of them need the household app API switched on:</p>
+      <p>Members browse what's new, see what their household already has, tap <strong>Get this</strong> and follow <strong>My requests</strong>. Every app signs in with Jellyfin and sends your sign-in, searches and requests only to the household's own address; the one exception is artwork: posters, backdrops and logos load straight from TMDB's image server (<code>image.tmdb.org</code>), which sees your IP address and which images were loaded but no account details (see the <a href="/privacy/">privacy policy</a>). All of them need the household app API switched on:</p>
 
       <pre><code>HOUSEHOLD_APP_ENABLED=true
-      TMDB_API_KEY=<var>tmdb-key</var></code></pre>
+TMDB_API_KEY=<var>tmdb-key</var></code></pre>
 
       <p>with <code>HOUSEHOLD_DOMAIN</code> and Seerr configured. Without it, the apps' paths answer <code>404</code>.</p>
 
@@ -88,7 +88,7 @@
       <p>The TV add-on adds JellyPass to Jellyfin web's own interface on chosen households' addresses: a <strong>Discover</strong> row on Home, a Discover row on Search, title pages with <strong>Play</strong> and <strong>Get this</strong>, <strong>My requests</strong>, and a Discover page behind a compass button in Jellyfin's header. It works where Jellyfin's interface is loaded from the server, such as browsers and Jellyfin's LG webOS app.</p>
 
       <pre><code>TV_ADDON_ENABLED=true
-      TV_ADDON_HOUSEHOLDS=grove</code></pre>
+TV_ADDON_HOUSEHOLDS=grove</code></pre>
 
       <p>List one household first and check it on your TV, then add others or use <code>*</code> for all. Households not listed are unchanged. Members must add the household address (not your LAN address or main Jellyfin address) as their server.</p>
 

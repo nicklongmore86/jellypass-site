@@ -62,12 +62,12 @@
         <li>Read the release notes in the <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md">changelog</a> for every version between yours and the new one. Each says whether the state file or any setting changes.</li>
         <li>Back up the state file:
       <pre><code>docker compose stop jellypass
-      cp -p data/grants.json data/grants.json.backup
-      docker compose start jellypass</code></pre></li>
+cp -p data/grants.json data/grants.json.backup
+docker compose start jellypass</code></pre></li>
         <li>Set <code>JELLYPASS_IMAGE</code> in <code>.env</code> to the new version, then:
       <pre><code>docker compose pull
-      docker compose up -d
-      curl http://127.0.0.1:8787/health</code></pre></li>
+docker compose up -d
+curl http://127.0.0.1:8787/health</code></pre></li>
       </ol>
 
       <p>Each release is published as <code>X.Y.Z</code>, plus <code>X.Y</code> and <code>X</code> tags that move to the newest release in that line. <code>latest</code> follows the main branch and may contain unreleased changes. Restarting JellyPass signs administrators out of the admin site.</p>
@@ -84,13 +84,15 @@
 
       <h2 id="jellyfin-versions">Jellyfin versions</h2>
 
-      <p>JellyPass supports the current Jellyfin release and the one before it: <strong>Jellyfin 12.x and 10.11.x</strong>. It reads Jellyfin's version at startup and every five minutes. From 3.10.0, on any other version (an older 10.x, a pre-release or a future 13.0):</p>
+      <p>JellyPass supports the current Jellyfin release and the one before it: <strong>Jellyfin 12.x and 10.11.x</strong>. It reads Jellyfin's version at startup and every five minutes. From 3.10.0, any other version (an older 10.x, a future 13.0, or any build whose version has a suffix, such as <code>12.5.0-rc1</code>) is <strong>unconfirmed</strong> until an administrator confirms it. On an unconfirmed version, or while JellyPass can't read the version:</p>
 
       <ul>
-        <li>household addresses answer <code>503</code> and pass nothing to Jellyfin, because their privacy checks were written for the supported versions;</li>
-        <li>the admin site, webhooks and grants keep working;</li>
-        <li>an administrator allows that exact version with <strong>Allow Jellyfin X</strong> in the admin site, or with <code>JELLYFIN_UNTESTED_VERSION_OK</code>. A later upgrade to another untested version pauses household addresses again.</li>
+        <li>in JellyPass 3.x, household addresses <strong>keep serving</strong> as before;</li>
+        <li>JellyPass logs a warning once for each version, the admin site shows a notice that this is not a tested Jellyfin version, and <code>GET /v1/jellyfin/version</code> reports <code>"confirmation": "unconfirmed"</code> and <code>"enforcement": "warn"</code>;</li>
+        <li>an administrator confirms that exact version with <strong>Allow Jellyfin X</strong> in the admin site, or with <code>JELLYFIN_UNTESTED_VERSION_OK</code>, which clears the warning. Confirm a version only once you are satisfied JellyPass's household privacy checks hold on it, since they were written for the supported versions. A later upgrade to another untested version warns again.</li>
       </ul>
+
+      <p><strong>JellyPass 4.0.0 will refuse</strong> household requests on an unconfirmed version: household addresses will answer <code>503</code> and pass nothing to Jellyfin until that exact version is confirmed, and also while the version can't be read. The admin site, webhooks and grants keep working either way.</p>
 
       <p>Check JellyPass's release notes before upgrading Jellyfin to a new major version.</p>
 

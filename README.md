@@ -28,11 +28,13 @@ nothing.
 Every page is hand-written HTML. The header, footer and docs sidebar are repeated in each page, so a change to them
 is made in every file; `scripts/check-site.mjs` (Node 18+, no dependencies; it is never run by Cloudflare) fails if
 they differ, if a page loads anything from another host or has a script, if the TMDB notice or JustWatch credit is
-missing, if a docs page lacks its "Edit this page on GitHub" link, or if an internal link or anchor is broken. Before
-a pull request:
+missing, if a docs page lacks its "Edit this page on GitHub" link, or if an internal link or anchor is broken. With a
+private deny-list (one case-insensitive regular expression per line, kept outside the repository and named by
+`JELLYPASS_PRIVATE_DENYLIST`, or an untracked `.private-denylist` at the root, which `.gitignore` excludes), it also
+fails if a page matches any entry; without one it skips that check and says so. Before a pull request:
 
 ```sh
-node scripts/check-site.mjs
+JELLYPASS_PRIVATE_DENYLIST=/path/to/private-denylist.txt node scripts/check-site.mjs
 npx html-validate "**/*.html"
 ```
 

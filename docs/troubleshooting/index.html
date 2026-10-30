@@ -59,7 +59,7 @@
       <p>Start with the logs and the health check:</p>
 
       <pre><code>docker compose logs --tail=100 jellypass
-      curl http://127.0.0.1:8787/health</code></pre>
+curl http://127.0.0.1:8787/health</code></pre>
 
       <h2 id="eacces">The container stops with <code>EACCES: permission denied</code></h2>
 
@@ -85,9 +85,9 @@
 
       <p>Check that the household exists, that its ID is lowercase letters, numbers and hyphens, that <code>HOUSEHOLD_DOMAIN</code> and <code>HOUSEHOLD_HOST_PREFIX</code> match the address, and that the proxy passes the original <code>Host</code>.</p>
 
-      <h2 id="household-503">A household address answers <code>503</code></h2>
+      <h2 id="jellyfin-version">The admin site says this is not a tested Jellyfin version</h2>
 
-      <p>JellyPass can't read Jellyfin's version yet, or Jellyfin runs a version JellyPass doesn't support. The admin site shows which; see <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>.</p>
+      <p>Jellyfin runs a version JellyPass doesn't support, or JellyPass can't read Jellyfin's version yet. In 3.x household addresses keep serving; JellyPass only warns until an administrator confirms that exact version. From 4.0.0, household addresses will answer <code>503</code> until then. See <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>.</p>
 
       <h2 id="admin-instead">A household address shows the JellyPass admin sign-in</h2>
 

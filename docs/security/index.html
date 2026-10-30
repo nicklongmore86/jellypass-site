@@ -71,7 +71,7 @@
       <ul>
         <li>Use different long random values for <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>. If <code>ADMIN_TOKEN</code> is unset, the webhook token also unlocks the admin API.</li>
         <li>Keep Jellyfin, Seerr and TMDB keys out of Git, screenshots and support requests. JellyPass never logs passwords, Jellyfin tokens, the Jellyfin API key or webhook tokens.</li>
-        <li>Prefer the webhook's <code>Authorization</code> header to <code>?token=</code>, which can appear in logs.</li>
+        <li>Send the webhook token in the <code>Authorization</code> header. <code>?token=</code> can appear in logs and is deprecated: 3.x still accepts it, 4.0.0 will not.</li>
       </ul>
 
       <h2 id="data">The state file</h2>

@@ -64,18 +64,18 @@
         <li>
           <p>Make a folder and download the Compose file and the example settings:</p>
       <pre><code>mkdir jellypass &amp;&amp; cd jellypass
-      curl -LO https://raw.githubusercontent.com/nicklongmore86/jellypass/main/compose.yaml
-      curl -Lo .env https://raw.githubusercontent.com/nicklongmore86/jellypass/main/.env.example</code></pre>
+curl -LO https://raw.githubusercontent.com/nicklongmore86/jellypass/main/compose.yaml
+curl -Lo .env https://raw.githubusercontent.com/nicklongmore86/jellypass/main/.env.example</code></pre>
         </li>
         <li>
           <p>Create the data folder. The container runs as user <code>node</code> (UID 1000), which must own it:</p>
       <pre><code>mkdir -m 700 data
-      sudo chown 1000:1000 data</code></pre>
+sudo chown 1000:1000 data</code></pre>
         </li>
         <li>
           <p>Edit <code>.env</code> and replace every placeholder. At least <code>JELLYFIN_URL</code>, <code>JELLYFIN_API_KEY</code>, <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>; see <a href="/docs/configuration/">Settings reference</a>. Make the two tokens different long random values:</p>
       <pre><code>openssl rand -hex 32
-      openssl rand -hex 32</code></pre>
+openssl rand -hex 32</code></pre>
         </li>
         <li>
           <p>Pin a release instead of <code>latest</code>, which is rebuilt from the main branch and may hold unreleased changes. In <code>.env</code>, using the newest version from the <a href="https://github.com/nicklongmore86/jellypass/releases">releases page</a>:</p>
@@ -84,8 +84,8 @@
         <li>
           <p>Start it and check it is up:</p>
       <pre><code>docker compose up -d
-      docker compose ps
-      curl http://127.0.0.1:8787/health</code></pre>
+docker compose ps
+curl http://127.0.0.1:8787/health</code></pre>
           <p><code>/health</code> answers <code>{"status":"ok"}</code> once the process is running. It does not check Jellyfin or Seerr.</p>
         </li>
       </ol>
@@ -103,13 +103,17 @@
 
       <h2 id="source">Build from source</h2>
 
-      <pre><code>git clone https://github.com/nicklongmore86/jellypass.git
-      cd jellypass
-      cp .env.example .env
-      # Edit .env.
-      docker compose -f compose.example.yaml up --build -d</code></pre>
+      <p>Clone the repository and run every command below inside it. The container runs as user 1000, so create the state directory first and give it to that user:</p>
 
-      <p>Without Docker: Node.js 22 or later, then <code>corepack enable</code>, <code>pnpm install --frozen-lockfile</code>, <code>pnpm build</code> and <code>pnpm start</code>, with the settings in the environment.</p>
+      <pre><code>git clone https://github.com/nicklongmore86/jellypass.git
+cd jellypass
+mkdir -m 700 data
+sudo chown 1000:1000 data
+cp .env.example .env
+# Edit .env.
+docker compose -f compose.example.yaml up --build -d</code></pre>
+
+      <p>Without Docker: Node.js 22 or later, then, inside the clone, <code>mkdir -m 700 data</code> (owned by the user that runs JellyPass), <code>corepack enable</code>, <code>pnpm install --frozen-lockfile</code>, <code>pnpm build</code> and <code>pnpm start</code>, with the settings in the environment.</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/installation/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">

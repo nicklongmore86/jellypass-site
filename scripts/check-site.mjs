@@ -5,7 +5,9 @@
 //   and the same site navigation, apart from which entry is marked current;
 // - every docs page has the same sidebar, apart from which entry is marked current, and an "Edit this page" link to its own file;
 // - every link to this site points at a file that exists;
-// - no deployment's real details appear.
+// - no deployment's real details appear, when a private deny-list is available: one case-insensitive regular expression
+//   per line (blank lines and # comments ignored), read from the file JELLYPASS_PRIVATE_DENYLIST names or, failing that,
+//   from the untracked .private-denylist at the repository root. The list itself is never committed.
 // Run: node scripts/check-site.mjs (Node 18 or later, no dependencies).
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -13,7 +15,15 @@ import path from 'node:path';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SITE_REPO = 'https://github.com/nicklongmore86/jellypass-site';
 const NOTICE = 'This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.';
-const FORBIDDEN = [/starrgroup/i, /\b10\.172\./, /farmhouse/i, /fearing/i, /davilla/i];
+const DENYLIST = process.env.JELLYPASS_PRIVATE_DENYLIST || path.join(ROOT, '.private-denylist');
+const FORBIDDEN = existsSync(DENYLIST)
+  ? readFileSync(DENYLIST, 'utf8').split('\n').flatMap((text, index) => {
+    const line = text.trim();
+    return line && !line.startsWith('#') ? [{ pattern: new RegExp(line, 'i'), line: index + 1 }] : [];
+  })
+  : null;
+if (!FORBIDDEN) console.warn(`No private deny-list at ${DENYLIST}; skipping the check for deployment details.`);
+else if (!FORBIDDEN.length) console.warn(`The private deny-list at ${DENYLIST} is empty; skipping the check for deployment details.`);
 
 const pages = [];
 (function walk(dir) {
@@ -52,7 +62,7 @@ for (const page of pages.sort()) {
   if (uncurrent(block(html, /<nav class="site-nav"[\s\S]*?<\/nav>/)) !== siteNav) fail(page, 'site navigation differs from index.html');
   const mailto = [...html.matchAll(/mailto:([^"?]+)/g)].map((m) => m[1]);
   if (mailto.some((address) => address !== 'support@jellypass.app')) fail(page, `has another contact address: ${mailto.join(', ')}`);
-  for (const pattern of FORBIDDEN) if (pattern.test(html)) fail(page, `mentions ${pattern}`);
+  for (const { pattern, line } of FORBIDDEN ?? []) if (pattern.test(html)) fail(page, `matches line ${line} of the private deny-list`);
   if (page.startsWith('docs/')) {
     if (uncurrent(block(html, /<nav class="docs-nav"[\s\S]*?<\/nav>/)) !== docsNav) fail(page, 'docs sidebar differs from docs/index.html');
     if (!html.includes(`href="${SITE_REPO}/edit/main/${page}"`)) fail(page, 'has no "Edit this page on GitHub" link to itself');

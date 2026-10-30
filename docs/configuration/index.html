@@ -56,7 +56,7 @@
     <main id="main" class="docs-main">
       <h1>Settings reference</h1>
 
-      <p>JellyPass reads its settings from environment variables when it starts; with Compose, put them in <code>.env</code>. An invalid value stops startup with a message naming the setting. Booleans take <code>true</code>, <code>false</code>, <code>1</code> or <code>0</code>.</p>
+      <p>JellyPass reads its settings from environment variables when it starts; with Compose, put them in <code>.env</code>. An invalid value stops startup with a message naming the setting, except <code>LOG_LEVEL</code>: an unrecognised level logs a warning and JellyPass uses <code>info</code>. Booleans take <code>true</code>, <code>false</code>, <code>1</code> or <code>0</code>.</p>
 
       <h2 id="core">Connections and basics</h2>
 
@@ -106,7 +106,7 @@
           <tr><th scope="row"><code>REQUEST_BACKFILL_SINCE</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Turns on the <a href="/docs/seerr-webhook/#backfill">request backfill</a> for requests created on or after this date: <code>YYYY-MM-DD</code> (UTC midnight) or an ISO 8601 date-time with <code>Z</code> or an offset.</td></tr>
           <tr><th scope="row"><code>REQUEST_BACKFILL_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>true</code> when the date is set</td><td>Set <code>false</code> to pause the backfill. Needs Seerr and the date.</td></tr>
           <tr><th scope="row"><code>TRUSTED_PROXIES</code></th><td data-label="Required">No</td><td data-label="Default">empty</td><td>Reverse proxies whose <code>X-Forwarded-For</code> is believed: IPv4/IPv6 addresses and CIDR ranges separated by commas, no ports. See <a href="/docs/reverse-proxy/#trusted-proxies">Reverse proxy</a>.</td></tr>
-          <tr><th scope="row"><code>JELLYFIN_UNTESTED_VERSION_OK</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>One exact Jellyfin version outside the supported releases that household addresses may serve on, such as <code>13.0.0</code>. New in 3.10.0.</td></tr>
+          <tr><th scope="row"><code>JELLYFIN_UNTESTED_VERSION_OK</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>One exact Jellyfin version outside the supported releases, such as <code>13.0.0</code>, that counts as confirmed, so JellyPass doesn't warn about it (and, from 4.0.0, household addresses serve on it). New in 3.10.0.</td></tr>
           <tr><th scope="row"><code>LOG_LEVEL</code></th><td data-label="Required">No</td><td data-label="Default"><code>info</code></td><td><code>debug</code>, <code>info</code>, <code>warn</code> or <code>error</code>. Only <code>debug</code> changes output today (routine disconnects and skipped backfill items).</td></tr>
           <tr><th scope="row"><code>JELLYPASS_IMAGE</code></th><td data-label="Required">Compose only</td><td data-label="Default"><code>…/jellypass:latest</code></td><td>The image the Compose file runs. Pin a version.</td></tr>
           <tr><th scope="row"><code>JELLYPASS_ENV_FILE</code></th><td data-label="Required">Compose only</td><td data-label="Default"><code>.env</code></td><td>Another settings file for the Compose file.</td></tr>
@@ -117,20 +117,20 @@
       <h2 id="minimal">A minimal <code>.env</code></h2>
 
       <pre><code>JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:<var>X.Y.Z</var>
-      JELLYFIN_URL=http://jellyfin:8096
-      JELLYFIN_API_KEY=<var>jellyfin-admin-api-key</var>
-      SEERR_URL=http://seerr:5055
-      SEERR_API_KEY=<var>seerr-api-key</var>
-      WEBHOOK_TOKEN=<var>long-random-secret</var>
-      ADMIN_TOKEN=<var>different-long-random-secret</var>
+JELLYFIN_URL=http://jellyfin:8096
+JELLYFIN_API_KEY=<var>jellyfin-admin-api-key</var>
+SEERR_URL=http://seerr:5055
+SEERR_API_KEY=<var>seerr-api-key</var>
+WEBHOOK_TOKEN=<var>long-random-secret</var>
+ADMIN_TOKEN=<var>different-long-random-secret</var>
 
-      # Household addresses and the apps
-      HOUSEHOLD_DOMAIN=example.com
-      HOUSEHOLD_APP_ENABLED=true
-      TMDB_API_KEY=<var>tmdb-key</var>
-      TRUSTED_PROXIES=192.168.1.5</code></pre>
+# Household addresses and the apps
+HOUSEHOLD_DOMAIN=example.com
+HOUSEHOLD_APP_ENABLED=true
+TMDB_API_KEY=<var>tmdb-key</var>
+TRUSTED_PROXIES=192.168.1.5</code></pre>
 
-      <p>The example settings file, <a href="https://github.com/nicklongmore86/jellypass/blob/main/.env.example"><code>.env.example</code></a>, lists the same settings with comments.</p>
+      <p>The example settings file, <a href="https://github.com/nicklongmore86/jellypass/blob/main/.env.example"><code>.env.example</code></a>, lists the same settings with comments. The <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/server-reference.md">server reference</a> has every setting in full detail, with the administrator API and metrics.</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/configuration/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">

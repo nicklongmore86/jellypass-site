@@ -68,32 +68,34 @@
         <li>Enable the webhook agent.</li>
         <li>Select only <strong>Request Available</strong>.</li>
         <li>Webhook URL: <code>http://jellypass:8787/webhooks/seerr</code> on a shared Docker network, or JellyPass's address as Seerr reaches it.</li>
-        <li>Authorization header: <code>Bearer <var>your WEBHOOK_TOKEN</var></code>. If your Seerr version has no header field, add <code>?token=<var>your WEBHOOK_TOKEN</var></code> to the URL instead; a token in a URL can end up in logs, so keep that route private.</li>
+        <li>Authorization header: <code>Bearer <var>your WEBHOOK_TOKEN</var></code>. This is the recommended way to send the token.</li>
         <li>JSON payload: paste the template below, in Seerr's own form, and save. Don't write it into Seerr's <code>settings.json</code> by hand: Seerr stores it in its own encoding.</li>
       </ol>
 
+      <p><strong>Deprecated:</strong> putting the token in the URL as <code>?token=<var>your WEBHOOK_TOKEN</var></code> still works in JellyPass 3.x but will be removed in 4.0.0. A token in a URL can end up in logs; if you use it, move it to the Authorization header.</p>
+
       <pre><code>{
-        "notificationType": "{{notification_type}}",
-        "event": "{{event}}",
-        "media": {
-          "jellyfinMediaId": "{{media_jellyfinMediaId}}",
-          "mediaType": "{{media_type}}"
-        },
-        "request": {
-          "id": "{{request_id}}",
-          "requestedBy": {
-            "jellyfinUserId": "{{requestedBy_jellyfinUserId}}",
-            "username": "{{requestedBy_username}}"
-          }
-        }
-      }</code></pre>
+  "notificationType": "{{notification_type}}",
+  "event": "{{event}}",
+  "media": {
+    "jellyfinMediaId": "{{media_jellyfinMediaId}}",
+    "mediaType": "{{media_type}}"
+  },
+  "request": {
+    "id": "{{request_id}}",
+    "requestedBy": {
+      "jellyfinUserId": "{{requestedBy_jellyfinUserId}}",
+      "username": "{{requestedBy_username}}"
+    }
+  }
+}</code></pre>
 
       <p>With <code>SEERR_URL</code> and <code>SEERR_API_KEY</code> set, JellyPass can look the request up itself, so this smaller payload is enough (needed for some Jellyseerr releases that have no Jellyfin ID variables):</p>
 
       <pre><code>{
-        "notificationType": "{{notification_type}}",
-        "request": { "id": "{{request_id}}" }
-      }</code></pre>
+  "notificationType": "{{notification_type}}",
+  "request": { "id": "{{request_id}}" }
+}</code></pre>
 
       <p>4K requests need Seerr configured: Seerr's template has no 4K item ID, so JellyPass asks Seerr which item to protect.</p>
 

@@ -84,77 +84,87 @@
 
       <h2 id="examples">Examples</h2>
 
-      <p>These are starting points, not complete configurations. Replace <code>example.com</code>, the household names and the LAN range with your own. Both were syntax-checked with Caddy 2.10 and nginx 1.28.</p>
+      <p>These are starting points, not complete configurations. Replace <code>example.com</code>, the household names and the LAN range with your own. Both were checked with Caddy 2.10 and nginx 1.28, including that a request naming any other host never reaches JellyPass.</p>
 
       <h3 id="caddy">Caddy</h3>
 
       <p>Caddy passes <code>Host</code>, handles WebSockets and streams responses by default, and gets certificates itself. Here Caddy shares a Docker network with JellyPass; list each household address:</p>
 
       <pre><code># Household addresses: list each one.
-      jelly-grove.example.com, jelly-heath.example.com {
-      	reverse_proxy jellypass:8787
-      }
+jelly-grove.example.com, jelly-heath.example.com {
+	reverse_proxy jellypass:8787
+}
 
-      # The admin site: its own name, reachable from the LAN only.
-      jellypass-admin.example.com {
-      	@lan remote_ip 192.168.1.0/24
-      	handle @lan {
-      		reverse_proxy jellypass:8787
-      	}
-      	respond 403
-      }</code></pre>
+# The admin site: its own name, reachable from the LAN only.
+jellypass-admin.example.com {
+	@lan remote_ip 192.168.1.0/24
+	handle @lan {
+		reverse_proxy jellypass:8787
+	}
+	respond 403
+}</code></pre>
 
       <h3 id="nginx">nginx</h3>
 
       <pre><code>map $http_upgrade $connection_upgrade {
-          default upgrade;
-          ''      close;
-      }
+    default upgrade;
+    ''      close;
+}
 
-      # Household addresses: jelly-&lt;household&gt;.example.com
-      server {
-          listen 443 ssl;
-          server_name ~^jelly-[a-z0-9-]+\.example\.com$;
+# Any other name: refuse it. Without this block the first server below
+# would become the default and pass unmatched names to JellyPass, which
+# answers any non-household name with the admin site.
+server {
+    listen 80 default_server;
+    listen 443 ssl default_server;
+    ssl_reject_handshake on;
+    return 444;
+}
 
-          ssl_certificate     /etc/nginx/certs/wildcard.example.com.crt;
-          ssl_certificate_key /etc/nginx/certs/wildcard.example.com.key;
+# Household addresses: jelly-&lt;household&gt;.example.com
+server {
+    listen 443 ssl;
+    server_name ~^jelly-[a-z0-9-]+\.example\.com$;
 
-          location / {
-              proxy_pass http://127.0.0.1:8787;
-              proxy_http_version 1.1;
-              proxy_set_header Host $host;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_set_header X-Forwarded-Host $host;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection $connection_upgrade;
-              proxy_buffering off;
-              proxy_read_timeout 1h;
-          }
-      }
+    ssl_certificate     /etc/nginx/certs/wildcard.example.com.crt;
+    ssl_certificate_key /etc/nginx/certs/wildcard.example.com.key;
 
-      # The admin site: its own name, LAN only.
-      server {
-          listen 443 ssl;
-          server_name jellypass-admin.example.com;
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_buffering off;
+        proxy_read_timeout 1h;
+    }
+}
 
-          ssl_certificate     /etc/nginx/certs/wildcard.example.com.crt;
-          ssl_certificate_key /etc/nginx/certs/wildcard.example.com.key;
+# The admin site: its own name, LAN only.
+server {
+    listen 443 ssl;
+    server_name jellypass-admin.example.com;
 
-          allow 192.168.1.0/24;
-          deny  all;
+    ssl_certificate     /etc/nginx/certs/wildcard.example.com.crt;
+    ssl_certificate_key /etc/nginx/certs/wildcard.example.com.key;
 
-          location / {
-              proxy_pass http://127.0.0.1:8787;
-              proxy_http_version 1.1;
-              proxy_set_header Host $host;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_set_header X-Forwarded-Host $host;
-          }
-      }</code></pre>
+    allow 192.168.1.0/24;
+    deny  all;
 
-      <p>If you use a different <code>HOUSEHOLD_HOST_PREFIX</code>, change <code>jelly-</code> in <code>server_name</code> to match.</p>
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+}</code></pre>
+
+      <p>If you use a different <code>HOUSEHOLD_HOST_PREFIX</code>, change <code>jelly-</code> in <code>server_name</code> to match. Keep the <code>default_server</code> block: nginx picks the server by the request's <code>Host</code>, not only by the name the TLS connection used, so a request naming any other host is closed instead of reaching the admin site. The Caddy example needs no such block: Caddy serves only the names listed and answers any other <code>Host</code> with an empty response, without passing it to JellyPass.</p>
 
       <h3 id="npm-traefik">Nginx Proxy Manager and Traefik</h3>
 
