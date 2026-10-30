@@ -1,6 +1,9 @@
 # Cloudflare Pages response headers for every path. The site loads only its own stylesheet and images, runs no script,
 # and has no forms, frames or cookies, so everything else is refused.
+# Cache-Control keeps Pages' default (public, max-age=0, must-revalidate) and adds no-transform, which stops Cloudflare
+# injecting its Web Analytics beacon: https://developers.cloudflare.com/web-analytics/faq/
 /*
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
   Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
