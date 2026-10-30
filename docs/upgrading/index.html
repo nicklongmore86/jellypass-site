@@ -84,13 +84,15 @@ curl http://127.0.0.1:8787/health</code></pre></li>
 
       <h2 id="jellyfin-versions">Jellyfin versions</h2>
 
-      <p>JellyPass supports the current Jellyfin release and the one before it: <strong>Jellyfin 12.x and 10.11.x</strong>. It reads Jellyfin's version at startup and every five minutes. From 3.10.0, any other version (an older 10.x, a future 13.0, or any build whose version has a suffix, such as <code>12.5.0-rc1</code>) is <strong>unconfirmed</strong> until an administrator confirms it. On an unconfirmed version, or while JellyPass can't read the version:</p>
+      <p>JellyPass supports the current Jellyfin release and the one before it: <strong>Jellyfin 12.x and 10.11.x</strong>. It reads Jellyfin's version at startup and every five minutes. From 3.10.0, any other version (an older 10.x, a future 13.0, or any build whose version has a suffix, such as <code>12.5.0-rc1</code>) is <strong>unconfirmed</strong> until an administrator confirms it. On an unconfirmed version:</p>
 
       <ul>
         <li>in JellyPass 3.x, household addresses <strong>keep serving</strong> as before;</li>
         <li>JellyPass logs a warning once for each version, the admin site shows a notice that this is not a tested Jellyfin version, and <code>GET /v1/jellyfin/version</code> reports <code>"confirmation": "unconfirmed"</code> and <code>"enforcement": "warn"</code>;</li>
         <li>an administrator confirms that exact version with <strong>Allow Jellyfin X</strong> in the admin site, or with <code>JELLYFIN_UNTESTED_VERSION_OK</code>, which clears the warning. Confirm a version only once you are satisfied JellyPass's household privacy checks hold on it, since they were written for the supported versions. A later upgrade to another untested version warns again.</li>
       </ul>
+
+      <p>While JellyPass can't read the version (Jellyfin unreachable at startup, or its last read failed), there is nothing to confirm: in 3.x household addresses keep serving, JellyPass logs a warning for each failed read and tries again every 30 seconds, the admin site shows that the version can't be read, and <code>GET /v1/jellyfin/version</code> reports <code>"version": null</code> and <code>"confirmation": null</code> (with <code>"enforcement": "warn"</code> and the last <code>error</code>).</p>
 
       <p><strong>JellyPass 4.0.0 will refuse</strong> household requests on an unconfirmed version: household addresses will answer <code>503</code> and pass nothing to Jellyfin until that exact version is confirmed, and also while the version can't be read. The admin site, webhooks and grants keep working either way.</p>
 
