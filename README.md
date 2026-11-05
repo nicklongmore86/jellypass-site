@@ -1,7 +1,7 @@
 # jellypass-site
 
-The public website for JellyPass at [jellypass.app](https://jellypass.app/): the pages the App Store and Google Play
-listings of **JellyPass Household** link to.
+The public website for JellyPass at [jellypass.app](https://jellypass.app/): the pages the app links to, and the pages
+its App Store and Google Play listings can link to once those are public.
 
 | Page | URL |
 | --- | --- |
