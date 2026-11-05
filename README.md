@@ -38,7 +38,7 @@ JELLYPASS_PRIVATE_DENYLIST=/path/to/private-denylist.txt node scripts/check-site
 npx html-validate "**/*.html"
 ```
 
-The docs describe JellyPass server 3.x; facts in them are checked against the server's code, not its older docs.
+The docs describe JellyPass server 4.x; facts in them are checked against the server's code, not its older docs.
 
 ## Deployment
 
