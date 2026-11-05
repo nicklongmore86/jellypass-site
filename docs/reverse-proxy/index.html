@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Reverse proxy – JellyPass docs</title>
-  <meta name="description" content="Put JellyPass behind a reverse proxy with HTTPS: what the proxy must do, trusted proxies, Jellyfin known proxies, and example Caddy and nginx configurations.">
+  <meta name="description" content="Put JellyPass household addresses behind a reverse proxy with HTTPS: what the proxy must do, reaching the admin site, trusted proxies, the self-check, and Caddy, Cloudflare Tunnel, Nginx Proxy Manager, nginx and Traefik recipes.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -56,119 +56,221 @@
     <main id="main" class="docs-main">
       <h1>Reverse proxy</h1>
 
-      <p>Household addresses must be served over HTTPS by a reverse proxy you control, such as Caddy, nginx, Nginx Proxy Manager or Traefik. JellyPass decides which household a request is for from its <code>Host</code> header, so the proxy's job is simple but strict.</p>
+      <p>Household addresses must be served over HTTPS by a reverse proxy you control. JellyPass decides which household a request is for from its <code>Host</code> header alone, so the proxy's job is simple but strict. Each example below has working files in the repository's <a href="https://github.com/nicklongmore86/jellypass/tree/main/examples/proxy"><code>examples/proxy/</code></a>, and uses <code>grove.example.com</code> and <code>heath.example.com</code> as two households' addresses. Replace them with your own, one per household; no wildcard DNS record or certificate is needed.</p>
 
       <h2 id="requirements">What the proxy must do</h2>
 
       <ul>
-        <li><strong>Pass the original <code>Host</code></strong>, exactly one. JellyPass refuses a request naming more or fewer than one host with <code>400 invalid_host</code>.</li>
-        <li><strong>Forward WebSocket upgrades and byte-range requests</strong>, and avoid buffering large media responses.</li>
-        <li><strong>Append to <code>X-Forwarded-For</code></strong> rather than pass through whatever the client sent.</li>
-        <li><strong>Leave <code>no-transform</code> in place.</strong> JellyPass marks every HTML page <code>Cache-Control: …, no-transform</code> and compresses it itself.</li>
-        <li><strong>Send only household names to JellyPass from the internet.</strong> In JellyPass 3.x one port serves everything, and any host name that is not a household address gets the admin site. Don't forward a catch-all wildcard to JellyPass; give the admin site its own name and restrict it (see <a href="/docs/security/">Security</a>).</li>
+        <li><strong>Route each household address to the member listener,</strong> <code>8787</code>. Never route a public name to the admin listener, <code>8788</code>: it serves the admin site, the administrator API, the Seerr webhook and <code>/metrics</code>, and has no gate of its own beyond the sign-in.</li>
+        <li><strong>Pass the client's <code>Host</code> unchanged, exactly once,</strong> with no port added unless the address has that port. A <code>Host</code> that is no household's address gets <code>421 unknown_host</code>; a request that does not name exactly one host gets <code>400 invalid_host</code>. <code>X-Forwarded-Host</code> is never read.</li>
+        <li><strong>Serve household addresses over HTTPS only,</strong> and redirect plain <code>http://</code> at the proxy. Members' passwords and tokens travel in sign-ins and requests.</li>
+        <li><strong>Set <code>X-Forwarded-For</code></strong> (append the client's address, or replace the header with it) <strong>and <code>X-Forwarded-Proto: https</code>.</strong> Don't pass on a client's own values as if they were yours.</li>
+        <li><strong>Pass WebSocket upgrades</strong> (Jellyfin's <code>/socket</code>), for remote control, SyncPlay and live updates.</li>
+        <li><strong>Stream responses and request bodies</strong> rather than buffering them, and pass <code>Range</code> requests, for playback and seeking.</li>
+        <li><strong>Leave <code>Cache-Control: no-transform</code> alone.</strong> JellyPass compresses its HTML pages itself and marks them <code>no-transform</code>, so a CDN adds no scripts to them. Compression of other responses is optional.</li>
       </ul>
 
-      <p>DNS: point each household name, or a wildcard record such as <code>*.example.com</code>, at the proxy. Household names are a single label under your domain (<code>jelly-grove.example.com</code>), so one wildcard certificate covers them all; a wildcard certificate usually needs your proxy's DNS challenge.</p>
+      <p>The proxy alone does not make an address a household's: map each address in the admin site under <strong>Groups → Addresses</strong>, or with <code>PUT /v1/groups/<var>id</var>/addresses</code> on the admin listener. See <a href="/docs/households/#addresses">Household addresses</a>.</p>
+
+      <p>Keep Jellyfin's own address, if it has a public one, separate from the household addresses and give it to administrators only. A member who can reach Jellyfin directly bypasses the household checks. List it in <code>JELLYFIN_PUBLIC_URLS</code> so the self-check reports it.</p>
+
+      <h2 id="admin">Reaching the admin site</h2>
+
+      <p>None of the examples publishes the admin listener to the internet. Each publishes it on <code>127.0.0.1:8788</code> of the Docker host:</p>
+
+      <ul>
+        <li><strong>On the Docker host:</strong> <code>http://127.0.0.1:8788/admin/</code>.</li>
+        <li><strong>From another machine:</strong> an SSH tunnel, <code>ssh -L 8788:127.0.0.1:8788 user@docker-host</code>, then the same address.</li>
+        <li><strong>From your LAN:</strong> publish it on the host's private address instead (<code>192.168.1.10:8788:8788</code> in <code>ports:</code>), never on a public one.</li>
+        <li><strong>Over HTTPS:</strong> a separate proxy host of its own that only your LAN, VPN or an identity-aware gate can reach. The Caddy example has a commented <code>admin.example.com</code> block limited to private addresses, and the Cloudflare Tunnel example one for use only behind Cloudflare Access.</li>
+      </ul>
+
+      <p>Seerr's webhook goes to the admin listener over the private network, for example <code>http://jellypass:8788/webhooks/seerr</code>, never through a public name.</p>
 
       <h2 id="trusted-proxies">Client addresses: <code>TRUSTED_PROXIES</code> and Jellyfin's known proxies</h2>
 
-      <p>Behind a proxy every request reaches JellyPass from the proxy's address. Set <code>TRUSTED_PROXIES</code> to the address (or range) JellyPass sees the proxy connect from, so sign-in rate limits apply per client:</p>
+      <p>Behind a proxy every request reaches JellyPass from the proxy's address. Set <code>TRUSTED_PROXIES</code> to the address (or range) the proxy connects to JellyPass from, so sign-in rate limits apply per client. It is required while the household gateway is on: JellyPass stops at startup without it.</p>
 
-      <pre><code>TRUSTED_PROXIES=192.168.1.5</code></pre>
+      <pre><code>TRUSTED_PROXIES=192.0.2.10</code></pre>
 
-      <p>With Docker's published ports this is often the Docker network's gateway address rather than <code>127.0.0.1</code>; <code>docker network inspect</code> shows it. List only proxies you control: JellyPass walks <code>X-Forwarded-For</code> from right to left, skips trusted proxies and uses the first address it doesn't trust. Requests from addresses not listed are attributed to that address and their header is ignored.</p>
+      <p>With Docker's published ports this is often the Docker network's gateway address rather than <code>127.0.0.1</code>; <code>docker network inspect</code> shows it. List only proxies you control: JellyPass walks <code>X-Forwarded-For</code> from right to left, skips trusted proxies and uses the first address it doesn't trust. Requests from addresses not listed are attributed to that address and their header is ignored. <code>TRUSTED_PROXIES</code> never decides which household a request is for.</p>
 
       <p>JellyPass forwards to Jellyfin like any proxy hop. For Jellyfin to see real client addresses, add JellyPass and your reverse proxy in Jellyfin under <strong>Dashboard → Networking → Known proxies</strong>.</p>
 
-      <p>With a CDN in front of your proxy, either have the proxy restore the real client address from the CDN's header, or add the CDN's published ranges to both <code>TRUSTED_PROXIES</code> and Jellyfin's known proxies. Otherwise every client looks like a CDN server.</p>
+      <p>With a CDN in front of your proxy, either have the proxy restore the real client address from the CDN's header, or add the CDN's published ranges to both <code>TRUSTED_PROXIES</code> and Jellyfin's known proxies. Otherwise every client looks like a CDN server. See <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/server-reference.md#chains-of-proxies-and-cdns">Chains of proxies and CDNs</a>.</p>
+
+      <h2 id="self-check">Check it: the deployment self-check</h2>
+
+      <p>Once the addresses are mapped, sign in to the admin site and choose <strong>Run self-check</strong> on the Dashboard (or <code>POST /v1/self-check</code> with the admin token). Its <strong>proxy</strong> result requests each household's address through the proxy, with a one-off challenge, and counts it only if the request arrived with its <code>Host</code> unchanged, a valid <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> matching the address's scheme, and from a peer in <code>TRUSTED_PROXIES</code>.</p>
+
+      <p>The request comes from inside JellyPass, so JellyPass must be able to resolve and reach its own public names. The Caddy and Traefik examples give the proxy container those names as network aliases; behind a Cloudflare Tunnel the request goes out to Cloudflare and back.</p>
+
+      <p>The check does not prove that the proxy strips forged headers on every path a client could take. When you set the proxy up or change it, also run the <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/reverse-proxy.md#checking-client-addresses-from-outside">checks from outside</a>, from two networks you control.</p>
 
       <h2 id="examples">Examples</h2>
 
-      <p>These are starting points, not complete configurations. Replace <code>example.com</code>, the household names and the LAN range with your own. Both were checked with Caddy 2.10 and nginx 1.28, including that a request naming any other host never reaches JellyPass.</p>
+      <p>Run the commands from a clone of the repository. JellyPass's own settings go in the optional <code>jellypass.env</code> or the setup wizard, and each project needs its own <code>data</code> folder owned by UID 1000.</p>
 
       <h3 id="caddy">Caddy</h3>
 
-      <p>Caddy passes <code>Host</code>, handles WebSockets and streams responses by default, and gets certificates itself. Here Caddy shares a Docker network with JellyPass; list each household address:</p>
+      <p><a href="https://github.com/nicklongmore86/jellypass/tree/main/examples/proxy/caddy"><code>examples/proxy/caddy/</code></a> runs JellyPass and Caddy in one Compose project. Caddy gets certificates by DNS-01 through Cloudflare's DNS API, so certificates need no inbound port 80. The stock Caddy image has no DNS providers, so the example builds one with the <a href="https://github.com/caddy-dns/cloudflare"><code>caddy-dns/cloudflare</code></a> module.</p>
 
-      <pre><code># Household addresses: list each one.
-jelly-grove.example.com, jelly-heath.example.com {
+      <pre><code>cd examples/proxy/caddy
+cp env.example .env                     # ACME_EMAIL and CLOUDFLARE_API_TOKEN
+cp ../../../.env.example jellypass.env  # optional; otherwise the setup wizard
+mkdir -m 700 data &amp;&amp; sudo chown 1000:1000 data
+docker compose up -d --build</code></pre>
+
+      <p>The <code>Caddyfile</code> has one site block per household address. Caddy's defaults are what JellyPass needs: don't add <code>header_up Host</code>.</p>
+
+      <pre><code>(jellypass_member) {
 	reverse_proxy jellypass:8787
 }
 
-# The admin site: its own name, reachable from the LAN only.
-jellypass-admin.example.com {
-	@lan remote_ip 192.168.1.0/24
-	handle @lan {
-		reverse_proxy jellypass:8787
-	}
-	respond 403
+grove.example.com {
+	import jellypass_member
+}
+
+heath.example.com {
+	import jellypass_member
 }</code></pre>
 
-      <h3 id="nginx">nginx</h3>
+      <ul>
+        <li><strong>DNS token:</strong> a Cloudflare API token with <em>Zone → Zone → Read</em> and <em>Zone → DNS → Edit</em>, limited to the zone the household names are in. For another DNS provider, build with its module from <a href="https://github.com/caddy-dns">caddy-dns</a> and change the <code>acme_dns</code> line.</li>
+        <li><strong><code>TRUSTED_PROXIES</code>:</strong> Caddy's fixed address on the Compose network, <code>172.30.87.10</code>, which the example sets. If Docker reports the subnet overlaps another network, change the subnet, the address and <code>TRUSTED_PROXIES</code> together.</li>
+        <li><strong>New household:</strong> add a site block, add the name to the <code>aliases</code> of the <code>caddy</code> service (for the self-check), point its DNS record at the Docker host, run <code>docker compose up -d</code>, then map it in JellyPass.</li>
+        <li><strong>Cloudflare proxy (orange cloud):</strong> keep the household records <em>DNS only</em> with this setup, or use a Cloudflare Tunnel.</li>
+      </ul>
+
+      <h3 id="cloudflare-tunnel">Cloudflare Tunnel</h3>
+
+      <p><a href="https://github.com/nicklongmore86/jellypass/tree/main/examples/proxy/cloudflare-tunnel"><code>examples/proxy/cloudflare-tunnel/</code></a> runs JellyPass and <code>cloudflared</code> in one Compose project. Nothing is published to the internet, and Cloudflare terminates HTTPS with its own certificates.</p>
+
+      <ol>
+        <li>In Cloudflare Zero Trust, choose <strong>Networks → Tunnels → Create a tunnel</strong> (cloudflared), and copy its token into <code>.env</code> as <code>TUNNEL_TOKEN</code> (<code>cp env.example .env</code>).</li>
+        <li>Under the tunnel's <strong>Public Hostname</strong>s, add one per household address: the hostname, service type <strong>HTTP</strong>, URL <code>jellypass:8787</code>. Leave <strong>HTTP Host Header</strong> empty.</li>
+        <li>Run <code>docker compose up -d</code>, then map each address in JellyPass and run the self-check.</li>
+        <li>Make Cloudflare redirect plain HTTP: a tunnel passes on whatever protocol the visitor used, sign-ins included. Turn on <strong>Always Use HTTPS</strong> in the zone's <strong>SSL/TLS → Edge Certificates</strong>, or add a redirect rule for every household hostname.</li>
+        <li>Check it from outside your network, for each household hostname. It must answer <code>301</code> or <code>308</code> with <code>Location: https://grove.example.com/web/</code>:
+      <pre><code>curl -sI http://grove.example.com/web/</code></pre></li>
+      </ol>
+
+      <ul>
+        <li><strong><code>TRUSTED_PROXIES</code>:</strong> the <code>cloudflared</code> container's fixed address, <code>172.30.88.10</code>, alone. No Cloudflare ranges are needed.</li>
+        <li><strong>The admin listener:</strong> don't give <code>jellypass:8788</code> a public hostname unless a Cloudflare Access application covers it and admits your administrators only. Even then, keep Seerr's webhook on the private network.</li>
+        <li><strong>Nothing in front of household hostnames:</strong> Cloudflare Access, <em>Under Attack</em> mode or challenge pages stop the Jellyfin apps, the JellyPass app, TVs and the self-check, which cannot answer them.</li>
+        <li><strong>Web Analytics:</strong> don't add a Transform Rule that removes <code>no-transform</code>. Keep <strong>Network → WebSockets</strong> on.</li>
+        <li><strong>Video:</strong> streaming goes through Cloudflare's network; check Cloudflare's service terms for your plan before relying on it.</li>
+      </ul>
+
+      <p>A locally-managed tunnel works as well: the example's <code>config.yml</code> has the same routes.</p>
+
+      <h3 id="nginx-proxy-manager">Nginx Proxy Manager</h3>
+
+      <p>Create one proxy host per household address, or one host listing several addresses of the same JellyPass (<a href="https://github.com/nicklongmore86/jellypass/tree/main/examples/proxy/nginx-proxy-manager"><code>examples/proxy/nginx-proxy-manager/</code></a>):</p>
+
+      <ul>
+        <li><strong>Details:</strong> Domain Names <code>grove.example.com</code>; Scheme <code>http</code>; Forward Hostname / IP <code>jellypass</code> (or the Docker host's address); Forward Port <code>8787</code>; <strong>Websockets Support</strong> on; <strong>Cache Assets</strong> off.</li>
+        <li><strong>SSL:</strong> a Let's Encrypt certificate (<strong>Use a DNS Challenge</strong> if the host isn't reachable on port 80); <strong>Force SSL</strong> on.</li>
+        <li><strong>Advanced:</strong> the snippet below. Don't add a <code>location /</code> here: it replaces NPM's own, and the headers with it.</li>
+      </ul>
+
+      <pre><code>proxy_buffering off;
+proxy_request_buffering off;
+proxy_read_timeout 1h;
+proxy_send_timeout 1h;</code></pre>
+
+      <p><code>TRUSTED_PROXIES</code> is the address NPM connects to JellyPass from: a fixed address you give NPM on a shared Docker network; or, for NPM on another machine, that machine's LAN address, with JellyPass's <code>8787</code> published on a private address only it can reach; or, for NPM on the Docker host using a published port, usually the Docker network's gateway address. For the self-check, add the household names as network aliases of the NPM container, or make sure DNS and hairpin NAT send them back to NPM.</p>
+
+      <h3 id="nginx">Plain nginx or SWAG</h3>
+
+      <p>The same proxy as a server block, from the example's <code>nginx.conf</code>. <code>$host</code> has no port: for an address on a port other than 443, use <code>$http_host</code>. Uncomment <code>client_max_body_size</code> in the example if members upload files over 1 MB, and start nginx after JellyPass, or it stops with <code>host not found in upstream "jellypass"</code>.</p>
 
       <pre><code>map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
 }
 
-# Any other name: refuse it. Without this block the first server below
-# would become the default and pass unmatched names to JellyPass, which
-# answers any non-household name with the admin site.
 server {
-    listen 80 default_server;
-    listen 443 ssl default_server;
-    ssl_reject_handshake on;
-    return 444;
+    listen 80;
+    server_name grove.example.com heath.example.com;
+    return 301 https://$host$request_uri;
 }
 
-# Household addresses: jelly-&lt;household&gt;.example.com
 server {
     listen 443 ssl;
-    server_name ~^jelly-[a-z0-9-]+\.example\.com$;
+    http2 on;
+    server_name grove.example.com heath.example.com;
 
-    ssl_certificate     /etc/nginx/certs/wildcard.example.com.crt;
-    ssl_certificate_key /etc/nginx/certs/wildcard.example.com.key;
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
 
     location / {
-        proxy_pass http://127.0.0.1:8787;
+        proxy_pass http://jellypass:8787;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
         proxy_buffering off;
+        proxy_request_buffering off;
         proxy_read_timeout 1h;
-    }
-}
-
-# The admin site: its own name, LAN only.
-server {
-    listen 443 ssl;
-    server_name jellypass-admin.example.com;
-
-    ssl_certificate     /etc/nginx/certs/wildcard.example.com.crt;
-    ssl_certificate_key /etc/nginx/certs/wildcard.example.com.key;
-
-    allow 192.168.1.0/24;
-    deny  all;
-
-    location / {
-        proxy_pass http://127.0.0.1:8787;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
+        proxy_send_timeout 1h;
     }
 }</code></pre>
 
-      <p>If you use a different <code>HOUSEHOLD_HOST_PREFIX</code>, change <code>jelly-</code> in <code>server_name</code> to match. Keep the <code>default_server</code> block: nginx picks the server by the request's <code>Host</code>, not only by the name the TLS connection used, so a request naming any other host is closed instead of reaching the admin site. The Caddy example needs no such block: Caddy serves only the names listed and answers any other <code>Host</code> with an empty response, without passing it to JellyPass.</p>
+      <h3 id="traefik">Traefik</h3>
 
-      <h3 id="npm-traefik">Nginx Proxy Manager and Traefik</h3>
+      <p><a href="https://github.com/nicklongmore86/jellypass/tree/main/examples/proxy/traefik"><code>examples/proxy/traefik/</code></a> runs JellyPass and Traefik in one Compose project, with certificates by DNS-01 through Cloudflare (<code>CF_DNS_API_TOKEN</code> in <code>.env</code>, the same token as for Caddy). <code>dynamic.yml</code> has one router per household address, all to the member listener:</p>
 
-      <p>The same rules apply: one proxy host (or router) per household name, or one that matches only your household pattern, pointing at JellyPass on port 8787 with WebSocket support on, and a separate, restricted host for the admin site. Nginx Proxy Manager passes <code>Host</code> unchanged; turn on <strong>Websockets Support</strong> for household hosts.</p>
+      <pre><code>http:
+  routers:
+    jellypass-grove:
+      rule: Host(`grove.example.com`)
+      entryPoints: [websecure]
+      service: jellypass-member
+      tls:
+        certResolver: letsencrypt
+  services:
+    jellypass-member:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://jellypass:8787</code></pre>
+
+      <ul>
+        <li>Docker labels can replace the file: the equivalent labels are commented in the example's <code>compose.yaml</code>. Use one or the other for the same names.</li>
+        <li>Leave out the <code>compress</code> middleware for these routers, and any <code>headers</code> middleware that sets <code>Host</code> or <code>X-Forwarded-Host</code>.</li>
+        <li><strong><code>TRUSTED_PROXIES</code>:</strong> Traefik's fixed address, <code>172.30.89.10</code>, alone. The household names are network aliases of the Traefik container for the self-check.</li>
+      </ul>
+
+      <h2 id="limits">Request sizes and timeouts</h2>
+
+      <p>JellyPass streams uploads on to Jellyfin with no size limit of its own, but a whole request must arrive within 5 minutes. Stock nginx refuses bodies over 1 MB, and Cloudflare limits uploads per plan (100 MB on the Free plan). Stock nginx's 60-second read and send timeouts are short for a stream that pauses while transcoding, which is why the nginx and NPM examples raise them. The full table is in <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/reverse-proxy.md#request-sizes-and-timeouts">the recipes in the repository</a>.</p>
+
+      <h2 id="failures">Common failures</h2>
+
+      <div class="table-scroll">
+      <table>
+        <caption class="visually-hidden">Symptoms and likely causes</caption>
+        <thead><tr><th scope="col">Symptom</th><th scope="col">Likely cause</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>421 {"error":"unknown_host"}</code> on a household address</th><td>The address isn't mapped to a household, or not exactly as the browser sends it (another subdomain, a port). Or the proxy changed <code>Host</code>: NPM's forward host used as <code>Host</code>, cloudflared's <strong>HTTP Host Header</strong> set, Traefik's <code>passHostHeader: false</code>, Caddy's <code>header_up Host</code>. It is also the answer to any request sent straight to <code>8787</code> by IP.</td></tr>
+          <tr><th scope="row"><code>400 {"error":"invalid_host"}</code></th><td>The request named more than one host: two <code>Host</code> headers, a <code>Host</code> with a path or user name, or an absolute-form target whose authority is not the <code>Host</code>.</td></tr>
+          <tr><th scope="row"><code>http://</code> reaches a page instead of redirecting</th><td>The proxy or Cloudflare doesn't redirect plain HTTP. Sign-ins over it are unencrypted.</td></tr>
+          <tr><th scope="row"><code>421</code> for the admin site or the Seerr webhook</th><td>They were pointed at <code>8787</code>; they are on <code>8788</code>.</td></tr>
+          <tr><th scope="row">JellyPass stops with <code>TRUSTED_PROXIES is required</code></th><td>The household gateway is on and <code>TRUSTED_PROXIES</code> is empty.</td></tr>
+          <tr><th scope="row">Self-check <strong>proxy</strong> warns <code>0 of N</code></th><td><code>TRUSTED_PROXIES</code> isn't the address the proxy connects from; the proxy doesn't send <code>X-Forwarded-Proto: https</code>; the proxy changes <code>Host</code>; or JellyPass can't reach its own public names (no network aliases, no hairpin NAT, split DNS).</td></tr>
+          <tr><th scope="row">One person's failed sign-ins lock everyone out (<code>429</code>)</th><td><code>TRUSTED_PROXIES</code> doesn't name the proxy, so every client counts as the proxy's address.</td></tr>
+          <tr><th scope="row">Jellyfin shows JellyPass's or the proxy's address for every client</th><td>Jellyfin's <strong>Known proxies</strong> must list JellyPass and the proxy.</td></tr>
+          <tr><th scope="row">Jellyfin web keeps reconnecting; remote control or SyncPlay fails</th><td>WebSocket upgrades aren't passed: NPM's <strong>Websockets Support</strong> off, nginx without the <code>Upgrade</code> and <code>Connection</code> headers, Cloudflare's WebSockets switch off.</td></tr>
+          <tr><th scope="row">Video stalls, or seeking restarts playback</th><td>Response buffering or caching on the proxy, or <code>Range</code> headers stripped.</td></tr>
+          <tr><th scope="row"><code>502</code> from the proxy</th><td>The upstream is wrong (<code>jellypass:8787</code> from the proxy's network) or JellyPass isn't running.</td></tr>
+          <tr><th scope="row">An analytics script appears in household pages</th><td>Something between JellyPass and the browser removed <code>no-transform</code> from <code>Cache-Control</code>.</td></tr>
+        </tbody>
+      </table>
+      </div>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/reverse-proxy/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">

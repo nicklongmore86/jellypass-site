@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Households and members – JellyPass docs</title>
-  <meta name="description" content="Create households in the JellyPass admin site, give each its own address, add members, and mark members for one-tap sign-in.">
+  <meta name="description" content="Create households in the JellyPass admin site, map each its own address, add members, set app and TV switches, and understand what one-tap sign-in means for security.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -60,46 +60,80 @@
 
       <h2 id="admin">The admin site</h2>
 
-      <p>Sign in at <code>/admin/</code> with a Jellyfin administrator account. Its tabs:</p>
+      <p>Sign in at <code>/admin/</code> on the admin listener (<code>http://127.0.0.1:8788/admin/</code> on the Docker host) with a Jellyfin administrator account. Its tabs:</p>
 
       <ul>
-        <li><strong>Dashboard</strong>: grant counts, sync health and recent Seerr requests.</li>
+        <li><strong>Dashboard</strong>: grant counts, sync health, <strong>Recent Seerr activity</strong> and the deployment self-check.</li>
         <li><strong>Requests</strong> (with the household app on): every household's app requests, with <strong>Approve</strong>, <strong>Decline</strong> and <strong>Cancel request</strong>, and titles a cancel left held for no household.</li>
         <li><strong>Library</strong>: your Jellyfin catalogue, with bulk access for up to 500 titles.</li>
-        <li><strong>Grants</strong>: the titles JellyPass protects, who can see each, previews of what reconciliation would change, revoke and move.</li>
-        <li><strong>Groups</strong>: households, their members and addresses; Jellyfin users can be created or imported here.</li>
+        <li><strong>Grants</strong>: the titles JellyPass protects and who can see each. Every change is shown as a plan first and applied with the plan's own <strong>Apply</strong> button. <strong>Request grants</strong> lists the Seerr requests behind a title, and <strong>More → Move to another item…</strong> moves a grant.</li>
+        <li><strong>Groups</strong>: households, their members, addresses and switches; Jellyfin users can be created or imported here.</li>
       </ul>
+
+      <p><strong>Setup</strong> in the top bar opens the setup wizard again.</p>
 
       <h2 id="create">Create a household</h2>
 
       <ol>
-        <li>In <strong>Groups</strong>, create a group. Its ID becomes part of the household's address, so use lowercase letters, numbers and hyphens, at most 63 characters (for example <code>grove</code>).</li>
+        <li>In <strong>Groups</strong>, create a group. Its ID is how the API and logs name the household, so use a short name in lowercase letters and numbers (for example <code>grove</code>).</li>
         <li>Add its members: existing Jellyfin users, or new non-administrator users created here (optionally imported into Seerr too).</li>
-        <li>Optionally, under <strong>One-tap sign-in</strong>, mark members whose Jellyfin account has no password: on their household's address they sign in with one tap. Marking a member who does have a password stops them signing in there. A Jellyfin account without a password can be used by anyone who reaches Jellyfin and knows its name, so use it only where that is fine.</li>
+        <li>Under <strong>Addresses</strong>, give it <a href="#addresses">its address</a>.</li>
+        <li>Optionally, under <strong>One-tap sign-in</strong>, mark members whose Jellyfin account has no password. First read <a href="#one-tap">what that means</a>.</li>
       </ol>
 
       <p>Joining a household later does not change older grants. Add the household to those titles in <strong>Grants</strong>, or add the member to a household already assigned.</p>
 
       <h2 id="addresses">Household addresses</h2>
 
-      <p>With <code>HOUSEHOLD_DOMAIN</code> set, each household's address is:</p>
+      <p>With the household gateway on (<code>HOUSEHOLD_GATEWAY_ENABLED=true</code> and <code>TRUSTED_PROXIES</code> set, or the wizard's household step), give each household an HTTPS address in <strong>Groups → Addresses</strong>. Any hostname you control works; there is no naming rule. An address takes effect at once, with no restart. You can do the same with the admin API:</p>
 
-      <pre><code>https://&lt;prefix&gt;&lt;household-id&gt;.&lt;HOUSEHOLD_DOMAIN&gt;</code></pre>
+      <pre><code>curl -X PUT -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"origin": "https://media.example.com", "aliases": ["https://films.example.net:8443"]}' \
+  http://127.0.0.1:8788/v1/groups/grove/addresses</code></pre>
 
-      <p>The prefix is <code>HOUSEHOLD_HOST_PREFIX</code>, <code>jelly-</code> unless you change it. With <code>HOUSEHOLD_DOMAIN=example.com</code>, household <code>grove</code> is <code>https://jelly-grove.example.com</code>; with the prefix set to <code>media-</code> it is <code>https://media-grove.example.com</code>. The Groups tab shows each household's address. An address no household has answers <code>404</code>.</p>
+      <p><code>origin</code> is the household's main address and <code>aliases</code> are more addresses for it. Each is <code>https://host</code> or <code>https://host:port</code>, with no path. Addresses match exactly, case and default ports aside, so a subdomain or another port is a different address. <code>http://</code> is accepted for private networks, but the JellyPass phone app connects only over HTTPS. An address another household has is refused. A host name that is no household's address gets <code>421 {"error":"unknown_host"}</code>.</p>
 
-      <p>Give members their household's address. They use it as the server address in any Jellyfin app, in the JellyPass app, and for the web app at <code>/jellypass/app/</code>. The JellyPass phone app also opens setup links such as <code>jellypass://connect?address=https://jelly-grove.example.com</code>, which fill the address in (and only that).</p>
+      <p>Give members their household's address. They use it as the server address in any Jellyfin app, in the JellyPass app, and for the web app at <code>/jellypass/app/</code>. The JellyPass phone app also opens setup links such as <code>jellypass://connect?address=https://media.example.com</code>, which fill the address in (and only that).</p>
+
+      <p><strong>Legacy addresses.</strong> Installs from before 4.0.0 named households by a rule: with <code>HOUSEHOLD_DOMAIN=example.com</code>, household <code>grove</code> is <code>https://jelly-grove.example.com</code> (<code>jelly-</code> is <code>HOUSEHOLD_HOST_PREFIX</code>). Those addresses keep working alongside any you map, and need a group ID of lowercase letters, numbers and hyphens, at most 63 characters. A legacy address whose group doesn't exist answers <code>404 household_not_found</code>. Leave <code>HOUSEHOLD_DOMAIN</code> empty on a new install.</p>
 
       <h2 id="on-the-address">What a household address changes</h2>
 
       <ul>
-        <li>The sign-in screen lists only the household's visible members, and only members of that household can sign in there. Hidden members use Jellyfin's <strong>Manual Login</strong>.</li>
+        <li>The sign-in screen lists only the household's visible members, and only members of that household can sign in there. Hidden members use Jellyfin's <strong>Manual Login</strong>. A token that isn't a member's gets <code>401</code>.</li>
         <li>Quick Connect is unavailable, since it would skip the membership check.</li>
+        <li>Paths are denied by default: only vetted Jellyfin and plugin routes are passed on. Administration routes and plugin routes that would leak other households' requests or settings (parts of Streamyfin and Jellyfin Enhanced) are refused, so the Jellyfin dashboard doesn't work here. Keep a separate, non-household way to reach Jellyfin as an administrator.</li>
         <li>Every request that names a title is checked with Jellyfin, as the caller, before it is passed on; a request about another user, or a title the caller can't see, is refused.</li>
-        <li>Some plugin routes that would leak other households' requests or settings (parts of Streamyfin and Jellyfin Enhanced) are refused.</li>
       </ul>
 
-      <p>Filtering the sign-in list is about privacy and convenience, not authentication: members still sign in with Jellyfin, and Jellyfin's own policies still apply. Keep a separate, non-household way to reach Jellyfin as an administrator.</p>
+      <h2 id="one-tap">One-tap sign-in and what an address protects</h2>
+
+      <div class="callout warning">
+        <p><strong>With one-tap sign-in, anyone who can reach that household's address can pick a visible passwordless member and act as them.</strong> No password or other check stands in the way: they can see what that member sees, play it and make requests as them.</p>
+        <p><strong>Hiding a profile is no protection for a passwordless account.</strong> A hidden member also accepts an empty password when someone types their name, so knowing or guessing a hidden member's name is enough to sign in as them.</p>
+      </div>
+
+      <p>Otherwise, knowing an address is not authentication. Anyone who can reach an address sees that household's sign-in page and visible members' names, but must still sign in with Jellyfin as a member who has a password, and Jellyfin's own policies still apply. Filtering the sign-in list is about privacy and convenience, not access control.</p>
+
+      <ul>
+        <li>Users you create here without a password are marked for one-tap sign-in automatically. Existing users are marked in the group's <strong>One-tap sign-in</strong> list. Administrators can't be marked.</li>
+        <li>Marking a member who has a real password breaks only one-tap: tapping their profile fails until you remove the mark. They can still sign in by typing their password.</li>
+        <li>A Jellyfin account without a password can also be used by anyone who reaches Jellyfin directly and knows its name.</li>
+        <li>Use one-tap sign-in only where everyone who can reach the address may act as that member, for example an address reachable only from a network you trust. Otherwise give members passwords.</li>
+      </ul>
+
+      <h2 id="switches">App and TV switches</h2>
+
+      <p>Each household's card in <strong>Groups</strong> has two independent switches. <code>HOUSEHOLD_APP_ENABLED</code> and <code>TV_ADDON_ENABLED</code> still gate those services as a whole.</p>
+
+      <ul>
+        <li><strong>Mobile app access</strong> (on for new households): off refuses that household's members on the app API with <code>403 {"error":"app_access_disabled"}</code>, in every JellyPass app, the TV add-on's data included. It doesn't stop ordinary Jellyfin playback.</li>
+        <li><strong>TV add-on injection</strong> (off for new households): on adds the <a href="/docs/apps/#tv">TV add-on</a> to Jellyfin web on that household's addresses. Keep app access on for it to work. Off restores the ordinary Jellyfin page.</li>
+      </ul>
+
+      <p>While the deprecated <code>TV_ADDON_HOUSEHOLDS</code> is set, it decides TV access and the TV switches are shown locked. Check they show what you want, remove the variable and restart: the switches take over with the same households on.</p>
+
+      <p>Automation can use <code>PUT /v1/groups/<var>id</var>/features</code> on the admin listener with <code>appEnabled</code>, <code>tvAddonEnabled</code> or both.</p>
 
       <h2 id="sharing">Sharing a title with another household</h2>
 

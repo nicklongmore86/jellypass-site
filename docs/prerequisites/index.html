@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Prerequisites – JellyPass docs</title>
-  <meta name="description" content="What you need before installing JellyPass: Jellyfin 12.x or 10.11.x, Seerr, Docker, a reverse proxy with TLS, and a TMDB key for the apps.">
+  <meta name="description" content="What you need before installing JellyPass: Jellyfin 12.x or 10.11.x, Seerr, Docker Compose 2.24 or newer, a reverse proxy with TLS, and a TMDB key for the apps.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -60,13 +60,13 @@
         <caption class="visually-hidden">What JellyPass needs</caption>
         <thead><tr><th scope="col">You need</th><th scope="col">Details</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Jellyfin 12.x or 10.11.x</th><td>JellyPass supports the current Jellyfin release and the one before it, and tests both against a real Jellyfin before each release. On any other version, JellyPass 3.10.0 keeps serving household addresses but warns, in its log and in the admin site, until an administrator confirms that exact version; JellyPass 4.0.0 will refuse household requests instead (see <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>).</td></tr>
-          <tr><th scope="row">A Jellyfin administrator API key</th><td>Jellyfin <strong>Dashboard → API Keys</strong>. Only administrators can change item tags and user policies.</td></tr>
-          <tr><th scope="row">Seerr</th><td>Seerr, or Jellyseerr, with users imported from or linked to Jellyfin; it sends JellyPass the webhook. Overseerr on its own supports only Plex and does not work. Giving JellyPass Seerr's API key as well is needed for the apps, the request backfill, 4K requests and the short webhook payload.</td></tr>
-          <tr><th scope="row">Docker with Compose v2</th><td>The recommended install. Images are published for <code>linux/amd64</code> and <code>linux/arm64</code>. You can also run it from source with Node.js 22 or later and pnpm.</td></tr>
-          <tr><th scope="row">A reverse proxy with HTTPS</th><td>For household addresses: a domain you control, DNS for each household name (or a wildcard), and a certificate covering them. See <a href="/docs/reverse-proxy/">Reverse proxy</a>.</td></tr>
+          <tr><th scope="row">Jellyfin 12.x or 10.11.x</th><td>JellyPass supports the current Jellyfin release and the one before it, and tests both against a real Jellyfin before each release (today 12.4.0 and 10.11.11). On any other version, household addresses answer <code>503</code> until an administrator confirms that exact version; see <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>.</td></tr>
+          <tr><th scope="row">A Jellyfin administrator account</th><td>The setup wizard signs in once with an administrator's name and password, creates an API key of its own, and doesn't store the password. Only administrators can change item tags and user policies. Configuring by environment variables instead? Create the key yourself under <strong>Dashboard → API Keys</strong>.</td></tr>
+          <tr><th scope="row">Seerr</th><td>Seerr, or Jellyseerr, with its own setup finished and users imported from or linked to Jellyfin; it sends JellyPass the webhook. Overseerr on its own supports only Plex and does not work. Giving JellyPass Seerr's API key as well is needed for the setup wizard's webhook step, the apps, the request backfill and 4K requests.</td></tr>
+          <tr><th scope="row">Docker with Compose 2.24 or newer</th><td>The recommended install; the Compose file treats <code>.env</code> as optional, which needs 2.24. Images are published for <code>linux/amd64</code> and <code>linux/arm64</code>. You can also run it from source with Node.js 22 or later and pnpm.</td></tr>
+          <tr><th scope="row">A reverse proxy with HTTPS</th><td>For household addresses: a domain you control, a DNS record for each household name, and a certificate covering each one. No wildcard is needed, and the names can be anything. See <a href="/docs/reverse-proxy/">Reverse proxy</a>.</td></tr>
           <tr><th scope="row">A TMDB API key</th><td>Only for the household apps, which read titles, posters and details from <a href="https://www.themoviedb.org/">TMDB</a>. A v3 API key or a v4 read access token from your TMDB account's API settings. Read TMDB's <a href="https://www.themoviedb.org/api-terms-of-use">API terms</a>.</td></tr>
-          <tr><th scope="row">Somewhere private for the state file</th><td>One JSON file (<code>grants.json</code>) holds everything JellyPass decides. It contains Jellyfin user IDs and media names; keep it private and back it up.</td></tr>
+          <tr><th scope="row">Somewhere private for the data folder</th><td>The state file, <code>grants.json</code>, holds everything JellyPass decides, including Jellyfin user IDs and media names. A wizard install also keeps <code>settings.json</code> and <code>admin-token</code> there, which hold your keys and tokens. Keep the folder private and back it up.</td></tr>
         </tbody>
       </table>
 
@@ -74,8 +74,10 @@
 
       <ul>
         <li>JellyPass must reach Jellyfin and Seerr. Inside Docker, <code>localhost</code> is the JellyPass container itself: use a shared Docker network and service names (<code>http://jellyfin:8096</code>), or a LAN address such as <code>http://192.168.1.20:8096</code>.</li>
-        <li>Seerr must reach JellyPass's webhook, <code>/webhooks/seerr</code>.</li>
-        <li>Members reach household addresses through your reverse proxy. Administrators reach the admin site, which should not be public (see <a href="/docs/security/">Security</a>).</li>
+        <li>Seerr must reach JellyPass's webhook on the admin listener, for example <code>http://jellypass:8788/webhooks/seerr</code>.</li>
+        <li>Members reach household addresses through your reverse proxy, which routes them to port <code>8787</code>.</li>
+        <li>Administrators reach the admin site on port <code>8788</code>, which must not be public (see <a href="/docs/security/">Security</a>).</li>
+        <li>Members must not be able to reach Jellyfin or Seerr directly: household privacy holds only on household addresses.</li>
       </ul>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/prerequisites/index.html">Edit this page on GitHub</a></p>

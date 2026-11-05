@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Phone, web and TV apps – JellyPass docs</title>
-  <meta name="description" content="The JellyPass apps for members: the iPhone, iPad and Android app, the household web app, the Jellyfin TV add-on, and the advanced Samsung build.">
+  <meta name="description" content="The JellyPass apps for members: the household web app, the iPhone, iPad and Android app in invitation-only testing, the experimental Jellyfin TV add-on, and the advanced, unsupported Samsung build.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -56,12 +56,18 @@
     <main id="main" class="docs-main">
       <h1>Phone, web and TV apps</h1>
 
-      <p>Members browse what's new, see what their household already has, tap <strong>Get this</strong> and follow <strong>My requests</strong>. Every app signs in with Jellyfin and sends your sign-in, searches and requests only to the household's own address; the one exception is artwork: posters, backdrops and logos load straight from TMDB's image server (<code>image.tmdb.org</code>), which sees your IP address and which images were loaded but no account details (see the <a href="/privacy/">privacy policy</a>). All of them need the household app API switched on:</p>
+      <p>Members browse what's new, see what their household already has, tap <strong>Get this</strong> and follow <strong>My requests</strong>. Every app signs in with Jellyfin and sends your sign-in, searches and requests only to the household's own address; the one exception is artwork: posters, backdrops and logos load straight from TMDB's image server (<code>image.tmdb.org</code>), which sees your IP address and which images were loaded but no account details (see the <a href="/privacy/">privacy policy</a>). All of them need the household app API switched on, which the setup wizard can do, or:</p>
 
       <pre><code>HOUSEHOLD_APP_ENABLED=true
 TMDB_API_KEY=<var>tmdb-key</var></code></pre>
 
-      <p>with <code>HOUSEHOLD_DOMAIN</code> and Seerr configured. Without it, the apps' paths answer <code>404</code>.</p>
+      <p>with the household gateway and Seerr configured. Replace <var>tmdb-key</var> with your own key: JellyPass checks it at startup, and the placeholder stops it. Without the setting, the apps' paths answer <code>404</code>. Each household also has a <strong>Mobile app access</strong> switch, on by default; with it off, its members get <code>403 app_access_disabled</code> in every JellyPass app (see <a href="/docs/households/#switches">App and TV switches</a>).</p>
+
+      <h2 id="web">Household web app</h2>
+
+      <p>Every household address serves an installable web app at <code>/jellypass/app/</code>, for example <code>https://grove.example.com/jellypass/app/</code>. It is the one app every member can use today. It shares its sign-in with Jellyfin web on that address, so <strong>Play</strong> opens Jellyfin already signed in. Install it from the browser: Safari's <strong>Share → Add to Home Screen</strong>, or Chrome's <strong>Install app</strong>. On iPhone and iPad, sign in inside the installed app, which has its own storage.</p>
+
+      <p>Nothing to configure beyond the settings above: the app is built into the image.</p>
 
       <h2 id="mobile">iPhone, iPad and Android</h2>
 
@@ -69,32 +75,46 @@ TMDB_API_KEY=<var>tmdb-key</var></code></pre>
         <img src="/img/app-search.png" alt="The JellyPass app's Search screen on iPhone." width="440" height="449" loading="lazy">
       </figure>
 
+      <p><strong>The phone app is not publicly available yet.</strong> It isn't on the App Store or Google Play; the App Store release is not out yet.</p>
+
       <ul>
-        <li><strong>iPhone and iPad:</strong> through TestFlight, by invitation from whoever runs your server, for now; an App Store release is on its way.</li>
+        <li><strong>iPhone and iPad:</strong> through TestFlight, by invitation from whoever runs your server.</li>
         <li><strong>Android:</strong> an APK installed directly (sideloaded); ask whoever runs your server for the link. Android asks the first time to allow installing from your browser or file manager, and later APKs install over the old one, keeping the sign-in.</li>
-        <li><strong>Server:</strong> JellyPass 3.2.0 or later with the household app on. <strong>Cancel request</strong> and the day each title was requested need 3.5.0 or later; older servers simply don't show them.</li>
-        <li><strong>Address:</strong> any HTTPS address, for example <code>https://jelly-grove.example.com</code>. The app refuses <code>http://</code>, IP addresses and <code>.local</code> names. App versions before 1.3.0 accept only addresses beginning <code>jelly-</code>.</li>
+        <li><strong>Server:</strong> JellyPass 3.2.0 or later with the household app on. <strong>Cancel request</strong> and the day each title was requested need 3.5.0 or later, and <strong>Not interested</strong> with the <strong>Hidden</strong> tab needs 4.0.0 or later; older servers simply don't show them.</li>
+        <li><strong>Address:</strong> any HTTPS address, for example <code>https://grove.example.com</code>. The app refuses <code>http://</code>, IP addresses and <code>.local</code> names. App versions before 1.3.0 accept only addresses beginning <code>jelly-</code>.</li>
         <li><strong>Privacy:</strong> the sign-in is kept in the iOS Keychain or Android's encrypted storage. No analytics or crash reporting. See the <a href="/privacy/">privacy policy</a>.</li>
       </ul>
 
-      <h2 id="web">Household web app</h2>
+      <h2 id="tv">TV add-on (experimental)</h2>
 
-      <p>Every household address serves an installable web app at <code>/jellypass/app/</code>, for example <code>https://jelly-grove.example.com/jellypass/app/</code>. It shares its sign-in with Jellyfin web on that address, so <strong>Play</strong> opens Jellyfin already signed in. Install it from the browser: Safari's <strong>Share → Add to Home Screen</strong>, or Chrome's <strong>Install app</strong>. On iPhone and iPad, sign in inside the installed app, which has its own storage.</p>
+      <p>The TV add-on adds JellyPass to Jellyfin web's own interface on chosen households' addresses: a <strong>Discover</strong> row on Home, a Discover row on Search, title pages with <strong>Play</strong> and <strong>Get this</strong>, <strong>My requests</strong>, and a Discover page behind a compass button in Jellyfin's header. It is experimental and off by default, and it depends on Jellyfin web's page structure, so it is matched to Jellyfin web 12.x and 10.11.x only.</p>
 
-      <p>Nothing to configure beyond the settings above: the app is built into the image.</p>
+      <p>Turn on the global gate, then switch on one household first with its <strong>TV add-on injection</strong> switch in <strong>Groups</strong>, and check it on your TV before adding others. Other households are unchanged. Members must add the household address (not your LAN address or main Jellyfin address) as their server.</p>
 
-      <h2 id="tv">TV add-on</h2>
+      <pre><code>TV_ADDON_ENABLED=true</code></pre>
 
-      <p>The TV add-on adds JellyPass to Jellyfin web's own interface on chosen households' addresses: a <strong>Discover</strong> row on Home, a Discover row on Search, title pages with <strong>Play</strong> and <strong>Get this</strong>, <strong>My requests</strong>, and a Discover page behind a compass button in Jellyfin's header. It works where Jellyfin's interface is loaded from the server, such as browsers and Jellyfin's LG webOS app.</p>
+      <p>The easiest first check is a desktop browser on the household address, where the same row appears in Jellyfin web. From 4.1.0, on a TV the add-on also lowers Jellyfin web's own search to at most 100 items and 24 people, studios or artists.</p>
 
-      <pre><code>TV_ADDON_ENABLED=true
-TV_ADDON_HOUSEHOLDS=grove</code></pre>
+      <h3 id="tv-status">Where it has been tried</h3>
 
-      <p>List one household first and check it on your TV, then add others or use <code>*</code> for all. Households not listed are unchanged. Members must add the household address (not your LAN address or main Jellyfin address) as their server.</p>
+      <div class="table-scroll">
+      <table>
+        <caption class="visually-hidden">TV add-on status by device</caption>
+        <thead><tr><th scope="col">Device</th><th scope="col">Status</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Samsung, Tizen 5.0 (a 2019 model, about 1.2 GB of memory)</th><td>Tested with the Samsung build. It has had memory crashes on this low-memory set. The search cap in 4.1.0 mitigates search, but that is not yet verified on the TV.</td></tr>
+          <tr><th scope="row">Samsung, Tizen 5.5 (a 2020 model)</th><td>Tested with the Samsung build.</td></tr>
+          <tr><th scope="row">Samsung, Tizen 6.0</th><td>Installed; not yet verified working.</td></tr>
+          <tr><th scope="row">LG (webOS)</th><td>Not verified. Jellyfin's LG app loads Jellyfin web from the server, so the add-on should load there without a special build, and the design notes have an acceptance checklist for an operator to run.</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p>The full <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/tv-addon.md#what-must-be-checked-on-a-real-tv">real-TV checklist</a> has not been completed on any set, so expect rough edges and check it yourself first.</p>
 
       <h3 id="samsung">Samsung TVs (advanced, unsupported)</h3>
 
-      <p>Jellyfin's Samsung (Tizen) app bundles its own copy of Jellyfin web, so the add-on can't reach it. The repository has a JellyPass build of that app (<code>tv/samsung/</code>) that loads the add-on from the household address. It replaces the Jellyfin app on the TV, needs the TV in Developer Mode and Samsung's <code>sdb</code> tool, and uninstalling the stock app first clears its servers and sign-ins. It is aimed at people comfortable sideloading TV apps; see <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/tv-addon.md#the-samsung-app">the TV add-on design notes</a>.</p>
+      <p>Jellyfin's Samsung (Tizen) app bundles its own copy of Jellyfin web, so the add-on can't reach it. The repository has a JellyPass build of that app (<code>tv/samsung/</code>) that loads the add-on from the household address. You build it yourself. It replaces the Jellyfin app on the TV, needs the TV in Developer Mode and Samsung's <code>sdb</code> tool, and uninstalling the stock app first clears its servers and sign-ins. It is aimed at people comfortable sideloading TV apps, comes with no support, and needs a rebuild when your Jellyfin web version changes; see <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/tv-addon.md#the-samsung-app">the TV add-on design notes</a>.</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/apps/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">

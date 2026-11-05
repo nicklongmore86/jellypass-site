@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Introduction – JellyPass docs</title>
-  <meta name="description" content="What JellyPass is, how it keeps households apart on one Jellyfin server, and what it does not do.">
+  <meta name="description" content="What JellyPass is, how it keeps households apart on one Jellyfin server, its two ports, and what it does not do.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -58,28 +58,45 @@
 
       <p class="lead">JellyPass is a small server that runs next to <a href="https://jellyfin.org/">Jellyfin</a> and <a href="https://github.com/seerr-team/seerr">Seerr</a>. It lets several households share one Jellyfin server while each keeps its own requests private.</p>
 
-      <p>These pages describe JellyPass 3.x. They cover installing the server, putting it behind a reverse proxy, connecting Seerr, setting up households, and the apps members use.</p>
+      <p>These pages describe JellyPass 4.x, up to the current release, 4.2.0. They cover installing the server, putting it behind a reverse proxy, connecting Seerr, setting up households, and the apps members use. Coming from 3.x? Start with <a href="/docs/upgrading/#from-3">Upgrading from 3.x</a>.</p>
 
       <h2 id="how-it-works">How it works</h2>
 
       <ol>
         <li><strong>A household asks for a title.</strong> A member asks for it in Seerr, or taps <strong>Get this</strong> in a JellyPass app, which makes the Seerr request as that member.</li>
-        <li><strong>Seerr gets it.</strong> When the title is available, Seerr sends JellyPass a webhook.</li>
+        <li><strong>Seerr handles the request.</strong> When the title is available in Jellyfin, Seerr sends JellyPass a webhook.</li>
         <li><strong>JellyPass makes it private.</strong> It gives the Jellyfin item a private tag (one per title, such as <code>jfa:private:8f…</code>) and adds that tag to the <em>blocked tags</em> of every non-administrator Jellyfin user outside the requester's household. Everyone in the requester's household (every group they belong to) can see it; nobody else can.</li>
         <li><strong>It keeps it that way.</strong> JellyPass saves what it decided in its state file and reconciles Jellyfin with it regularly, so new users and transient failures are corrected.</li>
       </ol>
 
       <p>Administrators are never blocked. Titles JellyPass has never been told about stay as Jellyfin's own policies leave them, so your existing library does not suddenly disappear.</p>
 
+      <h2 id="ports">Two ports</h2>
+
+      <div class="table-scroll">
+      <table>
+        <caption class="visually-hidden">JellyPass's two listeners</caption>
+        <thead><tr><th scope="col">Port</th><th scope="col">Listener</th><th scope="col">Serves</th><th scope="col">Who reaches it</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>8788</code></th><td>Admin</td><td>The admin site and setup wizard, the administrator API, <code>/metrics</code>, the Seerr webhook and <code>/health</code></td><td>Administrators and Seerr, on this machine or a private network</td></tr>
+          <tr><th scope="row"><code>8787</code></th><td>Member</td><td>Household addresses only; any other host name gets a fixed <code>421</code></td><td>Your reverse proxy</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p>The Compose file publishes both on <code>127.0.0.1</code> only. Route household names to <code>8787</code>, and never route a public name to <code>8788</code>.</p>
+
       <h2 id="households">Households and their addresses</h2>
 
-      <p>A household is a group of Jellyfin users in the JellyPass admin site. With household addresses switched on, each household gets its own HTTPS address, for example <code>https://jelly-grove.example.com</code>. On that address JellyPass passes traffic through to Jellyfin, but:</p>
+      <p>A household is a group of Jellyfin users in the JellyPass admin site. With household addresses switched on, you give each household its own HTTPS address, for example <code>https://grove.example.com</code>. On that address JellyPass passes traffic through to Jellyfin, but:</p>
 
       <ul>
         <li>the sign-in screen lists only that household's members, and only they can sign in there;</li>
-        <li>Quick Connect is switched off, and requests that would reach another user's data or a title the member may not see are refused;</li>
+        <li>Quick Connect is switched off, routes JellyPass has not vetted are refused, and requests that would reach another user's data or a title the member may not see are refused;</li>
         <li>the household web app and its API are served, if you enable them.</li>
       </ul>
+
+      <p>Knowing an address is not a sign-in, with one exception you choose: a member marked for one-tap sign-in has no password to stop anyone who can reach the address. See <a href="/docs/households/#one-tap">One-tap sign-in</a>.</p>
 
       <p>Any Jellyfin client works with a household address: Jellyfin web, the Jellyfin apps and the JellyPass apps. See <a href="/docs/households/">Households and members</a>.</p>
 
@@ -87,13 +104,13 @@
 
       <ul>
         <li>It does not replace Jellyfin sign-in or permissions. Jellyfin still decides who may play what; JellyPass sets the policies Jellyfin enforces.</li>
-        <li>It does not download anything or decide whether a request is approved. That is Seerr's job.</li>
+        <li>It does not add media to your server or decide whether a request is approved. Seerr and the tools behind it do that.</li>
         <li>It does not cover access outside Jellyfin's API, such as direct file shares or DLNA.</li>
         <li>Series are protected as a whole, not season by season.</li>
       </ul>
 
       <div class="callout warning">
-        <p><strong>Test first.</strong> JellyPass changes Jellyfin item tags and whole user policies. Try it with non-critical users and media, keep a backup of its state file, and keep a separate way to reach Jellyfin as an administrator.</p>
+        <p><strong>Test first.</strong> JellyPass changes Jellyfin item tags and whole user policies. Try it with non-critical users and media, keep a backup of its data folder, and keep a separate way to reach Jellyfin as an administrator.</p>
       </div>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/index.html">Edit this page on GitHub</a></p>

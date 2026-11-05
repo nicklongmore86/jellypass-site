@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Installation – JellyPass docs</title>
-  <meta name="description" content="Install JellyPass with Docker Compose: download the Compose file and settings, create the data folder, start it and sign in to the admin site.">
+  <meta name="description" content="Install JellyPass with Docker Compose: start it, read the setup token, follow the setup wizard on port 8788, then sign in, create households and map their addresses.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -56,16 +56,15 @@
     <main id="main" class="docs-main">
       <h1>Installation</h1>
 
-      <p>JellyPass runs as one container, published on GitHub Container Registry as <code>ghcr.io/nicklongmore86/jellypass</code>.</p>
+      <p>JellyPass runs as one container, published on GitHub Container Registry as <code>ghcr.io/nicklongmore86/jellypass</code>. A first run starts a setup wizard, so there is nothing to write by hand.</p>
 
       <h2 id="compose">Docker Compose quick start</h2>
 
       <ol class="steps">
         <li>
-          <p>Make a folder and download the Compose file and the example settings:</p>
+          <p>Make a folder and get the Compose file:</p>
       <pre><code>mkdir jellypass &amp;&amp; cd jellypass
-curl -LO https://raw.githubusercontent.com/nicklongmore86/jellypass/main/compose.yaml
-curl -Lo .env https://raw.githubusercontent.com/nicklongmore86/jellypass/main/.env.example</code></pre>
+curl -LO https://raw.githubusercontent.com/nicklongmore86/jellypass/main/compose.yaml</code></pre>
         </li>
         <li>
           <p>Create the data folder. The container runs as user <code>node</code> (UID 1000), which must own it:</p>
@@ -73,33 +72,88 @@ curl -Lo .env https://raw.githubusercontent.com/nicklongmore86/jellypass/main/.e
 sudo chown 1000:1000 data</code></pre>
         </li>
         <li>
-          <p>Edit <code>.env</code> and replace every placeholder. At least <code>JELLYFIN_URL</code>, <code>JELLYFIN_API_KEY</code>, <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>; see <a href="/docs/configuration/">Settings reference</a>. Make the two tokens different long random values:</p>
-      <pre><code>openssl rand -hex 32
-openssl rand -hex 32</code></pre>
+          <p>Pin a release instead of <code>latest</code>, which is rebuilt from the main branch and may hold unreleased changes. Use the newest version on the <a href="https://github.com/nicklongmore86/jellypass/releases">releases page</a>:</p>
+      <pre><code>echo 'JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:4.2.0' &gt; .env</code></pre>
         </li>
         <li>
-          <p>Pin a release instead of <code>latest</code>, which is rebuilt from the main branch and may hold unreleased changes. In <code>.env</code>, using the newest version from the <a href="https://github.com/nicklongmore86/jellypass/releases">releases page</a>:</p>
-      <pre><code>JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:<var>X.Y.Z</var></code></pre>
-        </li>
-        <li>
-          <p>Start it and check it is up:</p>
+          <p>Start it and read the setup token:</p>
       <pre><code>docker compose up -d
-docker compose ps
-curl http://127.0.0.1:8787/health</code></pre>
-          <p><code>/health</code> answers <code>{"status":"ok"}</code> once the process is running. It does not check Jellyfin or Seerr.</p>
+sudo cat data/admin-token</code></pre>
+          <p>You can also read it with <code>docker compose exec jellypass cat /app/data/admin-token</code>. The token is never logged.</p>
+        </li>
+        <li>
+          <p>Check it is up:</p>
+      <pre><code>docker compose ps
+curl http://127.0.0.1:8788/health</code></pre>
+          <p><code>/health</code> answers <code>{"status":"ok","setup":"required"}</code> until setup has finished, then <code>{"status":"ok"}</code>. It shows the process is running; it does not check Jellyfin or Seerr.</p>
         </li>
       </ol>
 
-      <p>The Compose file publishes JellyPass on <code>127.0.0.1:8787</code> only, which suits a reverse proxy on the same machine. Change the published address deliberately if Seerr or the proxy must reach it over your network. JellyPass listens on one port, <code>8787</code>, for everything: the admin site, the webhook and every household address.</p>
+      <h2 id="wizard">The setup wizard</h2>
 
-      <h2 id="first-run">First sign-in</h2>
+      <p>On the Docker host, open <code>http://127.0.0.1:8788/admin/</code> and enter the setup token. From another machine, use an SSH tunnel, then the same address:</p>
+
+      <pre><code>ssh -L 8788:127.0.0.1:8788 user@docker-host</code></pre>
+
+      <p>The JellyPass container must be able to reach Jellyfin and Seerr by the addresses you give. If they are in other Compose projects, put JellyPass on their network with a <code>compose.override.yaml</code> next to <code>compose.yaml</code>, naming that network (here <code>media</code>), then run <code>docker compose up -d</code> again. Other containers on it reach JellyPass as <code>jellypass</code>:</p>
+
+      <pre><code>services:
+  jellypass:
+    networks: [default, media]
+networks:
+  media: {external: true}</code></pre>
+
+      <p>Each step checks what you give it and stores the result at once, so you can leave and come back:</p>
 
       <ol>
-        <li>Open <code>http://127.0.0.1:8787/admin/</code> (or the admin address your proxy serves) and sign in with an enabled <strong>Jellyfin administrator</strong> account. JellyPass checks the password with Jellyfin and keeps only its own session, in memory, for 12 hours.</li>
-        <li>Run <strong>Sync library</strong> so the Library tab lists your titles. A sync does not make anything private.</li>
-        <li><a href="/docs/seerr-webhook/">Connect Seerr's webhook</a>.</li>
-        <li><a href="/docs/households/">Create your households</a>, then <a href="/docs/reverse-proxy/">publish their addresses</a>.</li>
+        <li><strong>Jellyfin:</strong> its address and an administrator's name and password. JellyPass signs in once, creates an API key named <code>JellyPass</code>, checks it and signs out. The password is never stored.</li>
+        <li><strong>Seerr:</strong> its address and API key (Seerr's <strong>Settings → General</strong>). Finish Seerr's own setup first, or it refuses the key.</li>
+        <li><strong>Seerr webhook:</strong> JellyPass generates a webhook token and points Seerr's webhook at the address you give, for example <code>http://jellypass:8788</code>, then has Seerr send a test. Seerr has one webhook: if another one is set, on or off, the wizard shows it and replaces it only after you review and confirm.</li>
+        <li><strong>TMDB key</strong> for the household apps, checked with TMDB.</li>
+        <li><strong>Request backfill:</strong> the cutoff is your install date, so no request made before JellyPass was installed is imported.</li>
+        <li><strong>Household addresses</strong> (optional): the household gateway, the household app and <code>TRUSTED_PROXIES</code>, which is required with the gateway on. See <a href="/docs/reverse-proxy/#trusted-proxies">Reverse proxy</a>.</li>
       </ol>
+
+      <p><strong>Finish</strong> checks the whole configuration and starts JellyPass with it, in place. Only the Jellyfin step is required to finish; to change anything later, choose <strong>Setup</strong> in the admin site's top bar.</p>
+
+      <p>Until you finish, JellyPass runs in setup mode: port <code>8788</code> serves only the wizard, <code>/health</code> and Seerr's test notification, and answers everything else <code>503 setup_required</code>. Port <code>8787</code> is not listening.</p>
+
+      <div class="callout warning">
+        <p><strong>The setup token stays the admin token.</strong> Unless you set <code>ADMIN_TOKEN</code>, it is the bearer token for the admin API and <code>/metrics</code> for as long as JellyPass runs. Keep <code>data/admin-token</code> private. To rotate it, see <a href="/docs/security/#tokens">Tokens and keys</a>.</p>
+      </div>
+
+      <h2 id="first-run">After setup</h2>
+
+      <ol>
+        <li>Open <code>http://127.0.0.1:8788/admin/</code> again and sign in with an enabled <strong>Jellyfin administrator</strong> account. JellyPass checks the password with Jellyfin and keeps only its own session, in memory, for 12 hours.</li>
+        <li>Run <strong>Sync library</strong> so the Library tab lists your titles. A sync does not make anything private.</li>
+        <li>If you skipped the wizard's webhook step, <a href="/docs/seerr-webhook/#setup">connect Seerr's webhook</a> by hand.</li>
+        <li><a href="/docs/households/">Create your households</a> and give each its address (<strong>Groups → Addresses</strong>), then <a href="/docs/reverse-proxy/">put those addresses behind your reverse proxy</a>.</li>
+        <li>Turn off Quick Connect in Jellyfin's own settings. A new Jellyfin has it on; household addresses refuse it either way, but it stays open on Jellyfin's own address.</li>
+        <li>Choose <strong>Run self-check</strong> on the Dashboard. It checks for direct access to Jellyfin, Quick Connect, the proxy's headers, public Seerr access, the Jellyfin version and the TMDB key.</li>
+      </ol>
+
+      <h2 id="ports">Check the ports</h2>
+
+      <p>The Compose file publishes both listeners on <code>127.0.0.1</code> only, which suits a reverse proxy on the same machine.</p>
+
+      <ul>
+        <li><strong><code>8788</code>, the admin listener:</strong> to reach it from your LAN, change its line under <code>ports:</code> to a private address, such as <code>192.168.1.10:8788:8788</code>. Never publish it on a public address.</li>
+        <li><strong><code>8787</code>, the member listener:</strong> it starts only with the household gateway on. Then <code>curl http://127.0.0.1:8787/</code> answers <code>421 {"error":"unknown_host"}</code>, because <code>127.0.0.1</code> is not a household address. That is the correct answer: there is no admin site or health check here.</li>
+      </ul>
+
+      <h2 id="env">Configure with environment variables instead</h2>
+
+      <p>Every setting can be set in <code>.env</code>. A variable set there always wins over the wizard, which shows it as locked. With <code>JELLYFIN_URL</code>, <code>JELLYFIN_API_KEY</code> and <code>WEBHOOK_TOKEN</code> all set, the wizard is never shown and JellyPass starts directly.</p>
+
+      <pre><code>curl -Lo .env https://raw.githubusercontent.com/nicklongmore86/jellypass/main/.env.example</code></pre>
+
+      <p>Edit <code>.env</code>: set <code>JELLYPASS_IMAGE</code> to a release, and replace every placeholder, at least <code>JELLYFIN_URL</code>, <code>JELLYFIN_API_KEY</code>, <code>SEERR_URL</code>, <code>SEERR_API_KEY</code>, <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>. See <a href="/docs/configuration/">Settings reference</a>. Make the two tokens different long random values:</p>
+
+      <pre><code>openssl rand -hex 32
+openssl rand -hex 32</code></pre>
+
+      <p>Remove a placeholder you want the wizard to fill instead. Then run <code>docker compose up -d</code> and <a href="/docs/seerr-webhook/#setup">set up Seerr's webhook</a> by hand.</p>
 
       <h2 id="source">Build from source</h2>
 
@@ -110,10 +164,10 @@ cd jellypass
 mkdir -m 700 data
 sudo chown 1000:1000 data
 cp .env.example .env
-# Edit .env.
+# Edit .env, or empty it to use the setup wizard.
 docker compose -f compose.example.yaml up --build -d</code></pre>
 
-      <p>Without Docker: Node.js 22 or later, then, inside the clone, <code>mkdir -m 700 data</code> (owned by the user that runs JellyPass), <code>corepack enable</code>, <code>pnpm install --frozen-lockfile</code>, <code>pnpm build</code> and <code>pnpm start</code>, with the settings in the environment.</p>
+      <p>Without Docker: Node.js 22 or later, then, inside the clone, <code>mkdir -m 700 data</code> (owned by the user that runs JellyPass), <code>corepack enable</code>, <code>pnpm install --frozen-lockfile</code>, <code>pnpm build</code> and <code>pnpm start</code>, with any settings in the environment. The admin listener then defaults to <code>127.0.0.1:8788</code>.</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/installation/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">
