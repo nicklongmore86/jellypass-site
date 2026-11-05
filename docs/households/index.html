@@ -110,14 +110,14 @@
 
       <div class="callout warning">
         <p><strong>With one-tap sign-in, anyone who can reach that household's address can pick a visible passwordless member and act as them.</strong> No password or other check stands in the way: they can see what that member sees, play it and make requests as them.</p>
-        <p><strong>Hiding a profile is no protection for a passwordless account.</strong> A hidden member also accepts an empty password when someone types their name, so knowing or guessing a hidden member's name is enough to sign in as them.</p>
+        <p><strong>Hiding a profile is no protection for a passwordless account.</strong> A hidden member also accepts an empty password when someone types their name, so knowing or guessing a hidden member's name is enough to sign in as them. The mark only changes the profile picker: any member with no Jellyfin password can be signed in this way, marked or not, and only a Jellyfin password protects them.</p>
       </div>
 
       <p>Otherwise, knowing an address is not authentication. Anyone who can reach an address sees that household's sign-in page and visible members' names, but must still sign in with Jellyfin as a member who has a password, and Jellyfin's own policies still apply. Filtering the sign-in list is about privacy and convenience, not access control.</p>
 
       <ul>
         <li>Users you create here without a password are marked for one-tap sign-in automatically. Existing users are marked in the group's <strong>One-tap sign-in</strong> list. Administrators can't be marked.</li>
-        <li>Marking a member who has a real password breaks only one-tap: tapping their profile fails until you remove the mark. They can still sign in by typing their password.</li>
+        <li>Marking a member who has a real password breaks only one-tap: tapping their profile fails. They can still sign in by typing their password.</li>
         <li>A Jellyfin account without a password can also be used by anyone who reaches Jellyfin directly and knows its name.</li>
         <li>Use one-tap sign-in only where everyone who can reach the address may act as that member, for example an address reachable only from a network you trust. Otherwise give members passwords.</li>
       </ul>
