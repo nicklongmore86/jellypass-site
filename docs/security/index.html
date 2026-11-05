@@ -73,6 +73,7 @@
       <div class="callout warning">
         <p><strong>With one-tap sign-in, anyone who can reach that household's address can pick a visible passwordless member and act as them.</strong> Use it only where everyone who can reach the address may do that. See <a href="/docs/households/#one-tap">One-tap sign-in</a>.</p>
         <p><strong>Hiding a profile is no protection for a passwordless account.</strong> A hidden member also accepts an empty password when someone types their name, so knowing or guessing a hidden member's name is enough to sign in as them.</p>
+        <p><strong>Marking a member does not remove their password.</strong> Marking a member who has a real password breaks only one-tap: tapping their profile fails until you remove the mark. They can still sign in by typing their password.</p>
       </div>
 
       <p>Otherwise, knowing an address is not authentication. Anyone who can reach an address sees that household's sign-in page, with its visible members' names, and must still sign in as a member who has a password. A token is accepted on a household's address only for that household's members; another household's token gets the same <code>401</code> as an unknown one.</p>

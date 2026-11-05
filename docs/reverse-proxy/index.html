@@ -81,7 +81,7 @@
       <ul>
         <li><strong>On the Docker host:</strong> <code>http://127.0.0.1:8788/admin/</code>.</li>
         <li><strong>From another machine:</strong> an SSH tunnel, <code>ssh -L 8788:127.0.0.1:8788 user@docker-host</code>, then the same address.</li>
-        <li><strong>From your LAN:</strong> publish it on the host's private address instead (<code>192.168.1.10:8788:8788</code> in <code>ports:</code>), never on a public one.</li>
+        <li><strong>From your LAN:</strong> publish it on the host's private address instead, never on a public one. If that address were <code>192.0.2.10</code>, the line under <code>ports:</code> would be <code>192.0.2.10:8788:8788</code>.</li>
         <li><strong>Over HTTPS:</strong> a separate proxy host of its own that only your LAN, VPN or an identity-aware gate can reach. The Caddy example has a commented <code>admin.example.com</code> block limited to private addresses, and the Cloudflare Tunnel example one for use only behind Cloudflare Access.</li>
       </ul>
 

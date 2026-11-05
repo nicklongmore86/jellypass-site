@@ -138,7 +138,7 @@ networks:
       <p>The Compose file publishes both listeners on <code>127.0.0.1</code> only, which suits a reverse proxy on the same machine.</p>
 
       <ul>
-        <li><strong><code>8788</code>, the admin listener:</strong> to reach it from your LAN, change its line under <code>ports:</code> to a private address, such as <code>192.168.1.10:8788:8788</code>. Never publish it on a public address.</li>
+        <li><strong><code>8788</code>, the admin listener:</strong> to reach it from your LAN, change its line under <code>ports:</code> to the host's private address. If that address were <code>192.0.2.10</code>, the line would be <code>192.0.2.10:8788:8788</code>. Never publish it on a public address.</li>
         <li><strong><code>8787</code>, the member listener:</strong> it starts only with the household gateway on. Then <code>curl http://127.0.0.1:8787/</code> answers <code>421 {"error":"unknown_host"}</code>, because <code>127.0.0.1</code> is not a household address. That is the correct answer: there is no admin site or health check here.</li>
       </ul>
 

@@ -73,7 +73,7 @@
       <h2 id="network">Network</h2>
 
       <ul>
-        <li>JellyPass must reach Jellyfin and Seerr. Inside Docker, <code>localhost</code> is the JellyPass container itself: use a shared Docker network and service names (<code>http://jellyfin:8096</code>), or a LAN address such as <code>http://192.168.1.20:8096</code>.</li>
+        <li>JellyPass must reach Jellyfin and Seerr. Inside Docker, <code>localhost</code> is the JellyPass container itself: use a shared Docker network and service names (<code>http://jellyfin:8096</code>), or a LAN address such as <code>http://192.0.2.20:8096</code>.</li>
         <li>Seerr must reach JellyPass's webhook on the admin listener, for example <code>http://jellypass:8788/webhooks/seerr</code>.</li>
         <li>Members reach household addresses through your reverse proxy, which routes them to port <code>8787</code>.</li>
         <li>Administrators reach the admin site on port <code>8788</code>, which must not be public (see <a href="/docs/security/">Security</a>).</li>
