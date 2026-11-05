@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Upgrading and rollback – JellyPass docs</title>
-  <meta name="description" content="Upgrade JellyPass safely: back up the state file, pin a version, read the release notes, roll back, and Jellyfin version support.">
+  <meta name="description" content="Upgrade JellyPass safely: back up the data folder, pin a version, read the notes for 4.0, 4.1 and 4.2, roll back, and Jellyfin version support.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -59,48 +59,96 @@
       <h2 id="upgrade">Upgrade</h2>
 
       <ol>
-        <li>Read the release notes in the <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md">changelog</a> for every version between yours and the new one. Each says whether the state file or any setting changes.</li>
-        <li>Back up the state file:
-      <pre><code>docker compose stop jellypass
-cp -p data/grants.json data/grants.json.backup
-docker compose start jellypass</code></pre></li>
+        <li>Read the release notes in the <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md">changelog</a> for every version between yours and the new one, and the notes below. Each says whether the state file or any setting changes.</li>
+        <li>Back up the data folder (see <a href="#backup">Backup and restore</a>).</li>
         <li>Set <code>JELLYPASS_IMAGE</code> in <code>.env</code> to the new version, then:
       <pre><code>docker compose pull
 docker compose up -d
-curl http://127.0.0.1:8787/health</code></pre></li>
+curl http://127.0.0.1:8788/health</code></pre></li>
       </ol>
 
       <p>Each release is published as <code>X.Y.Z</code>, plus <code>X.Y</code> and <code>X</code> tags that move to the newest release in that line. <code>latest</code> follows the main branch and may contain unreleased changes. Restarting JellyPass signs administrators out of the admin site.</p>
 
+      <h2 id="notes">Version notes</h2>
+
+      <h3 id="to-4-2">Upgrading to 4.2.0</h3>
+
+      <p>No setting changes, and the state file stays at schema 9. The setup wizard now asks you to review an existing Seerr webhook before replacing it. Scripts that call <code>POST /v1/setup/webhook</code> with <code>replace: true</code> must first read <code>GET /v1/setup</code> and send the reviewed <code>expectedState</code>, <code>expectedCurrentUrl</code> and <code>expectedTargetUrl</code>; without them they get <code>400 review_required</code>. See the <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md#420---2026-11-02">4.2.0 notes</a>.</p>
+
+      <h3 id="to-4-1">Upgrading to 4.1.0</h3>
+
+      <p>No setting has to change, but:</p>
+
+      <ul>
+        <li><strong>The state file moves to schema 9</strong> on the first start, and 4.0.0 can't read it. JellyPass first writes a backup next to the file, <code>grants.json.v8.bak</code> (<code>.v7.bak</code> from a 3.x file), or a timestamped one whose path it logs if a different backup is already there.</li>
+        <li><strong><code>TV_ADDON_HOUSEHOLDS</code> is deprecated.</strong> While set, it works as in 4.0.0 and locks the new TV switches. To move to the switches, check they show what you want, remove the variable and restart.</li>
+        <li><strong>The Compose file needs Docker Compose 2.24 or newer,</strong> because it marks <code>.env</code> as optional. With no configuration at all, JellyPass now starts its setup wizard instead of stopping.</li>
+        <li><strong>The TV add-on's script has a new name.</strong> No CDN purge is needed.</li>
+      </ul>
+
+      <p>See the <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md#410---2026-11-02">4.1.0 notes</a>.</p>
+
+      <h3 id="from-3">Upgrading from 3.x to 4.0.0</h3>
+
+      <p>4.0.0 is a breaking release, so change your configuration in this order. Upgrade from 3.9.x or later 3.x; from 2.x, go through 3.9.x first. The <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md#upgrade-from-39x-or-later-3x">full steps are in the changelog</a>.</p>
+
+      <ol>
+        <li>Back up the state file, <code>.env</code> and the Compose file.</li>
+        <li>On the running 3.x, change Seerr's webhook: set the <code>Authorization: Bearer <var>WEBHOOK_TOKEN</var></code> header, remove any <code>?token=</code> from the URL, and use the <a href="/docs/seerr-webhook/#setup">full template</a>. Both old forms are refused from 4.0.0.</li>
+        <li>On a Jellyfin other than 12.x or 10.11.x, confirm its exact version first, or household addresses answer <code>503</code> after the upgrade.</li>
+        <li>In <code>.env</code>, set <code>TRUSTED_PROXIES</code> to the reverse proxy's address if it is empty, and add <code>LEGACY_WEBHOOK_ON_MEMBER_PORT=true</code> for the switch-over.</li>
+        <li>In the Compose file, add <code>ADMIN_HOST: 0.0.0.0</code> and <code>ADMIN_PORT: 8788</code> under <code>environment</code>, publish <code>8788</code> on a private address only (for example <code>127.0.0.1:8788:8788</code>), and change any health check to <code>http://127.0.0.1:8788/health</code>.</li>
+        <li>Point any admin proxy host at <code>8788</code> instead of <code>8787</code>, and keep it gated. Household names stay on <code>8787</code>.</li>
+        <li>Pull the new image and recreate the container. Check <code>curl http://127.0.0.1:8788/health</code>, the startup log's <code>admin</code> and <code>member</code> listeners, and a household address. The member port answers anything else with <code>421</code>.</li>
+        <li>In Seerr, change the webhook URL's port to <code>8788</code>, save and press <strong>Test</strong>. Then remove <code>LEGACY_WEBHOOK_ON_MEMBER_PORT</code> and recreate the container once more.</li>
+      </ol>
+
+      <p>Existing addresses such as <code>https://jelly-grove.example.com</code> keep working as long as <code>HOUSEHOLD_DOMAIN</code> is set. The state file moves to schema 8, which 3.x can't read. The add-to-library page is gone; members use <strong>Get this</strong>.</p>
+
       <h2 id="rollback">Roll back</h2>
+
+      <p>Pin the previous image; once you have checked it, set the same version in <code>.env</code> so it sticks:</p>
 
       <pre><code>JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:<var>PREVIOUS_VERSION</var> docker compose up -d</code></pre>
 
-      <p>An upgrade can move the state file to a schema older versions can't read; then restore the backup you took before upgrading. If you use the household app, check the admin-only <code>GET /v1/app/outstanding</code> first and roll back only once it answers <code>"clear": true</code>; the changelog explains how to drain it.</p>
+      <p>If you use the household app, check this first, and roll back only once it answers <code>"clear": true</code>; the changelog explains how to drain it:</p>
+
+      <pre><code>curl -H "Authorization: Bearer $ADMIN_TOKEN" http://127.0.0.1:8788/v1/app/outstanding</code></pre>
+
+      <ul>
+        <li><strong>4.2.0 to 4.1.0:</strong> the image tag alone. 4.1.0 runs on the same state file.</li>
+        <li><strong>4.1.x or later to 4.0.0:</strong> 4.0.0 stops at startup with <code>unsupported state schema version</code> and leaves the file alone. Stop JellyPass and restore the latest backup the upgrade wrote (<code>grants.json.v8.bak</code>, or the timestamped path it logged), losing changes made since, or use the <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md#rollback-to-400">in-place downgrade</a>. 4.0.0 reads settings only from the environment and ignores <code>settings.json</code>, so a wizard install needs its settings in <code>.env</code>, and <code>TV_ADDON_HOUSEHOLDS</code> set again if you removed it and use the add-on.</li>
+        <li><strong>4.x to 3.x:</strong> 3.x can't read schema 8 or later. Restore your backup, or follow <a href="https://github.com/nicklongmore86/jellypass/blob/main/CHANGELOG.md#rollback-to-3x">Rollback to 3.x</a>, and put the 3.x Compose file, <code>.env</code>, Seerr webhook URL and any admin proxy host back on <code>8787</code>.</li>
+        <li><strong>To 2.x:</strong> unsupported. Restore a backup made with the release you intend to run.</li>
+      </ul>
 
       <h2 id="backup">Backup and restore</h2>
 
-      <p>The state file is the only data JellyPass needs to keep. Back up Jellyfin separately: JellyPass is not a backup of Jellyfin's users or policies. To restore, stop JellyPass, put the backup in place (owned by UID 1000), start it, then preview and apply a reconciliation in <strong>Grants</strong>.</p>
+      <p>The state file is the data JellyPass must keep. A wizard install also keeps its settings in <code>settings.json</code> and its admin token in <code>admin-token</code>: back them up too, and keep them secret, since they hold your Jellyfin, Seerr and TMDB keys and your tokens.</p>
+
+      <pre><code>docker compose stop jellypass
+cp -p data/grants.json data/grants.json.backup
+# With the setup wizard:
+cp -p data/settings.json data/settings.json.backup
+cp -p data/admin-token data/admin-token.backup
+docker compose start jellypass</code></pre>
+
+      <p>Back up Jellyfin separately: JellyPass is not a backup of Jellyfin's users or policies. To restore, stop JellyPass, put the backups in place (owned by UID 1000), start it, then preview and apply a reconciliation in <strong>Grants</strong>.</p>
 
       <h2 id="jellyfin-versions">Jellyfin versions</h2>
 
-      <p>JellyPass supports the current Jellyfin release and the one before it: <strong>Jellyfin 12.x and 10.11.x</strong>. It reads Jellyfin's version at startup and every five minutes. From 3.10.0, any other version (an older 10.x, a future 13.0, or any build whose version has a suffix, such as <code>12.5.0-rc1</code>) is <strong>unconfirmed</strong> until an administrator confirms it. On an unconfirmed version:</p>
+      <p>JellyPass supports the current Jellyfin release and the one before it: <strong>Jellyfin 12.x and 10.11.x</strong>, tested with 12.4.0 and 10.11.11. It reads Jellyfin's version at startup and every five minutes. Any other version (an older 10.x, a future 13.0, or any build whose version has a suffix, such as <code>12.5.0-rc1</code>) is <strong>unconfirmed</strong> until an administrator confirms it. On an unconfirmed version:</p>
 
       <ul>
-        <li>in JellyPass 3.x, household addresses <strong>keep serving</strong> as before;</li>
-        <li>JellyPass logs a warning once for each version, the admin site shows a notice that this is not a tested Jellyfin version, and <code>GET /v1/jellyfin/version</code> reports <code>"confirmation": "unconfirmed"</code> and <code>"enforcement": "warn"</code>;</li>
-        <li>an administrator confirms that exact version with <strong>Allow Jellyfin X</strong> in the admin site, or with <code>JELLYFIN_UNTESTED_VERSION_OK</code>, which clears the warning. Confirm a version only once you are satisfied JellyPass's household privacy checks hold on it, since they were written for the supported versions. A later upgrade to another untested version warns again.</li>
+        <li>household addresses <strong>answer <code>503</code></strong> and pass nothing to Jellyfin, from 4.0.0 (3.x only warned);</li>
+        <li>JellyPass logs a warning once for each version, the admin site shows it with an <strong>Allow Jellyfin X</strong> button, and <code>GET /v1/jellyfin/version</code> reports <code>"confirmation": "unconfirmed"</code> and <code>"enforcement": "refuse"</code>;</li>
+        <li>the admin site, webhooks, grants and reconciliation keep working;</li>
+        <li>an administrator confirms that exact version with <strong>Allow Jellyfin X</strong>, or with <code>JELLYFIN_UNTESTED_VERSION_OK</code>. Confirm a version only once you are satisfied JellyPass's household privacy checks hold on it, since they were written for the supported versions. A later upgrade to another untested version is refused again until you confirm it in turn.</li>
       </ul>
 
-      <p>While JellyPass can't read the version (Jellyfin unreachable at startup, or its last read failed), there is nothing to confirm: in 3.x household addresses keep serving, JellyPass logs a warning for each failed read and tries again every 30 seconds, the admin site shows that the version can't be read, and <code>GET /v1/jellyfin/version</code> reports <code>"version": null</code> and <code>"confirmation": null</code> (with <code>"enforcement": "warn"</code> and the last <code>error</code>).</p>
-
-      <p><strong>JellyPass 4.0.0 will refuse</strong> household requests on an unconfirmed version: household addresses will answer <code>503</code> and pass nothing to Jellyfin until that exact version is confirmed, and also while the version can't be read. The admin site, webhooks and grants keep working either way.</p>
+      <p>While JellyPass can't read the version (Jellyfin unreachable, or its last read failed), household addresses also answer <code>503</code>. It starts anyway, tries again every 30 seconds and on household requests, and the admin site shows that the version can't be read. <code>GET /v1/jellyfin/version</code> then reports <code>"version": null</code> and <code>"confirmation": null</code>, with the last <code>error</code>.</p>
 
       <p>Check JellyPass's release notes before upgrading Jellyfin to a new major version.</p>
-
-      <h2 id="next">Coming in 4.0</h2>
-
-      <p>JellyPass 4.0 is in development and will be a breaking release, including moving the admin site to a listener of its own. It will come with upgrade notes; these pages describe 3.x.</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/upgrading/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">

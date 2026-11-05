@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Troubleshooting and FAQ – JellyPass docs</title>
-  <meta name="description" content="Fixes for common JellyPass problems: startup errors, missing grants, webhooks, household addresses, and frequently asked questions.">
+  <meta name="description" content="Fixes for common JellyPass problems: startup and setup errors, 421 and 503 answers, missing grants, webhooks, household addresses, and frequently asked questions.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -56,10 +56,10 @@
     <main id="main" class="docs-main">
       <h1>Troubleshooting and FAQ</h1>
 
-      <p>Start with the logs and the health check:</p>
+      <p>Start with the logs and the health check. Health is on the admin listener only:</p>
 
       <pre><code>docker compose logs --tail=100 jellypass
-curl http://127.0.0.1:8787/health</code></pre>
+curl http://127.0.0.1:8788/health</code></pre>
 
       <h2 id="eacces">The container stops with <code>EACCES: permission denied</code></h2>
 
@@ -67,31 +67,47 @@ curl http://127.0.0.1:8787/health</code></pre>
 
       <h2 id="startup">The container stops with a settings error</h2>
 
-      <p>JellyPass checks its settings at startup and names the one that is wrong, for example <code>SEERR_URL and SEERR_API_KEY must be configured together</code>, or a missing <code>TMDB_API_KEY</code> while <code>HOUSEHOLD_APP_ENABLED</code> is on. See the <a href="/docs/configuration/">Settings reference</a>.</p>
+      <p>JellyPass checks its settings at startup and names the one that is wrong, for example <code>SEERR_URL and SEERR_API_KEY must be configured together</code>, or <code>TRUSTED_PROXIES is required when the household gateway is on</code>: set it to your reverse proxy's address. <code>HOUSEHOLD_APP_ENABLED</code> needs the household gateway, Seerr and <code>TMDB_API_KEY</code>. See the <a href="/docs/configuration/">Settings reference</a>.</p>
+
+      <h2 id="setup-required">Everything answers <code>503 setup_required</code></h2>
+
+      <p>JellyPass is in setup mode: the required settings are missing, or the wizard has stored some but has not been finished. Port <code>8788</code> serves only the wizard, <code>/health</code> and Seerr's test notification, and port <code>8787</code> is not listening. Open <code>http://127.0.0.1:8788/admin/</code> and <a href="/docs/installation/#wizard">finish the wizard</a>.</p>
+
+      <h2 id="seerr-refused">The wizard says Seerr refused the API key</h2>
+
+      <p>Copy the key again from Seerr's <strong>Settings → General</strong>, and check that Seerr's own first-run setup is finished: an unfinished Seerr refuses every key.</p>
 
       <h2 id="not-private">A new title is in Library but not in Grants</h2>
 
-      <p>A title becomes private only when Seerr's webhook arrives, the backfill finds its request, or an administrator assigns it. Common causes: it was downloaded outside Seerr, it replaced media Seerr already had, it arrived before the webhook was set up, the requester's Seerr account isn't linked to Jellyfin, or the webhook is off, filtered to the wrong event, unreachable or using the wrong token. Assign it from <strong>Library</strong>, and set up the <a href="/docs/seerr-webhook/#backfill">backfill</a>.</p>
+      <p>A title becomes private only when Seerr's webhook arrives, the backfill finds its request, or an administrator assigns it. Common causes: it was added outside Seerr, it replaced media Seerr already had, it arrived before the webhook was set up, the requester's Seerr account isn't linked to Jellyfin, or the webhook is off, filtered to the wrong event, unreachable or using the wrong token. Assign it from <strong>Library</strong>, and set up the <a href="/docs/seerr-webhook/#backfill">backfill</a>.</p>
 
       <h2 id="webhook-401">The webhook gets <code>401</code></h2>
 
-      <p>The bearer header or <code>?token=</code> doesn't exactly match <code>WEBHOOK_TOKEN</code>. Check for copied whitespace.</p>
+      <p>The bearer header doesn't exactly match <code>WEBHOOK_TOKEN</code>. Check for copied whitespace.</p>
+
+      <h2 id="webhook-400">The webhook gets <code>400</code></h2>
+
+      <p><code>webhook_query_token_removed_use_authorization_header</code> means the URL has <code>?token=</code>: remove it and use the <code>Authorization</code> header. <code>webhook_payload_removed_use_current_seerr_template</code> means the payload is an older, shorter one: paste the <a href="/docs/seerr-webhook/#setup">full template</a> in Seerr's form. Refused webhooks are not retried, so the <a href="/docs/seerr-webhook/#backfill">backfill</a> picks up what they missed.</p>
 
       <h2 id="webhook-ids">The webhook reports missing Jellyfin IDs</h2>
 
-      <p>Set <code>SEERR_URL</code> and <code>SEERR_API_KEY</code> and use the request-ID-only payload, and make sure the requester was imported from Jellyfin.</p>
+      <p>Set <code>SEERR_URL</code> and <code>SEERR_API_KEY</code>, use the full template (empty Jellyfin IDs can then be looked up), and make sure the requester was imported from Jellyfin.</p>
 
-      <h2 id="household-404">A household address answers <code>404</code></h2>
+      <h2 id="household-421">A household address answers <code>421</code> or <code>404</code></h2>
 
-      <p>Check that the household exists, that its ID is lowercase letters, numbers and hyphens, that <code>HOUSEHOLD_DOMAIN</code> and <code>HOUSEHOLD_HOST_PREFIX</code> match the address, and that the proxy passes the original <code>Host</code>.</p>
+      <p><code>421 {"error":"unknown_host"}</code> means the name reaching the member listener is no household's address. Check the household's addresses in <strong>Groups → Addresses</strong> against the exact hostname and port in the browser, and that the proxy passes the original <code>Host</code> unchanged. <code>404 household_not_found</code> means a legacy <code>HOUSEHOLD_DOMAIN</code> address whose group doesn't exist. More causes are under <a href="/docs/reverse-proxy/#failures">Common failures</a>.</p>
 
-      <h2 id="jellyfin-version">The admin site says this is not a tested Jellyfin version</h2>
+      <h2 id="jellyfin-version">A household address answers <code>503</code></h2>
 
-      <p>Jellyfin runs a version JellyPass doesn't support, or JellyPass can't read Jellyfin's version yet. In 3.x household addresses keep serving; JellyPass only warns until an administrator confirms that exact version. From 4.0.0, household addresses will answer <code>503</code> until then. See <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>.</p>
+      <p>Jellyfin runs a version JellyPass doesn't support, or JellyPass can't read Jellyfin's version. Household addresses refuse to serve until that exact version is confirmed or the version can be read. If the admin site shows <strong>Allow Jellyfin X</strong>, see <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>. If it says the version can't be read, check that JellyPass can reach Jellyfin.</p>
 
-      <h2 id="admin-instead">A household address shows the JellyPass admin sign-in</h2>
+      <h2 id="app-disabled">The apps say access is off (<code>403 app_access_disabled</code>)</h2>
 
-      <p>The name reaching JellyPass isn't a household address, so JellyPass treats it as the admin site. Check the prefix and domain settings, and that the proxy passes <code>Host</code> unchanged.</p>
+      <p>That household's <strong>Mobile app access</strong> switch is off. See <a href="/docs/households/#switches">App and TV switches</a>.</p>
+
+      <h2 id="admin-unreachable">The admin site or the webhook is unreachable</h2>
+
+      <p>They are on the admin listener, port <code>8788</code>, not <code>8787</code>, which answers them with <code>421</code>. Open <code>http://127.0.0.1:8788/admin/</code>, point Seerr's webhook at <code>http://jellypass:8788/webhooks/seerr</code>, and move any container health check to port <code>8788</code>. If you upgraded from 3.x, see <a href="/docs/upgrading/#from-3">Upgrading from 3.x</a>.</p>
 
       <h2 id="library-empty">The Library tab is empty or out of date</h2>
 
@@ -110,12 +126,14 @@ curl http://127.0.0.1:8787/health</code></pre>
         <dd>No. The apps never show who asked for a title or which household has it, and a title another household holds looks the same as one nobody has.</dd>
         <dt>Do I need the apps?</dt>
         <dd>No. Members can keep requesting in Seerr and watching in any Jellyfin app on their household address. The apps add Get this, My requests and discovery.</dd>
+        <dt>Where do I get the phone app?</dt>
+        <dd>It isn't publicly available yet: it is by invitation for now. Every member can use the household web app today. See <a href="/docs/apps/">Phone, web and TV apps</a>.</dd>
         <dt>Does it support request quotas?</dt>
         <dd>Not in the apps: a member with a Seerr request quota sees titles as "Can't request" and can still use Seerr.</dd>
         <dt>Can I use more than 100 households?</dt>
         <dd>Only with the household app off.</dd>
         <dt>Where do I report a bug?</dt>
-        <dd>In <a href="https://github.com/nicklongmore86/jellypass/issues">GitHub issues</a>. Report security problems privately (see <a href="/docs/security/">Security</a>).</dd>
+        <dd>In <a href="https://github.com/nicklongmore86/jellypass/issues">GitHub issues</a>. Report security problems privately (see <a href="/docs/security/#report">Security</a>).</dd>
       </dl>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/troubleshooting/index.html">Edit this page on GitHub</a></p>

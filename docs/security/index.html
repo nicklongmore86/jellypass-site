@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Security – JellyPass docs</title>
-  <meta name="description" content="How to run JellyPass safely: keep the admin site private, use separate tokens, protect the state file, and report vulnerabilities privately.">
+  <meta name="description" content="How to run JellyPass safely: keep the admin listener private, what one-tap sign-in allows, protect tokens and the data folder, and report vulnerabilities privately.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -58,31 +58,47 @@
 
       <h2 id="admin">Keep the admin site private</h2>
 
-      <p><strong>The admin site is not gated by default.</strong> Anyone who can reach it can try to sign in with a Jellyfin administrator's name and password, and the admin API answers anyone holding <code>ADMIN_TOKEN</code>. JellyPass limits sign-in attempts, but:</p>
+      <p>The admin site, the administrator API, <code>/metrics</code> and the Seerr webhook are on the admin listener, port <code>8788</code>, published on <code>127.0.0.1</code> by default. Household addresses and the member listener never serve them: there, any host name that is no household's gets a fixed <code>421</code>.</p>
+
+      <p><strong>The admin listener has no gate of its own beyond the sign-in.</strong> Anyone who can reach it can try to sign in with a Jellyfin administrator's name and password, and the admin API answers anyone holding the admin token. JellyPass limits sign-in attempts, but:</p>
 
       <ul>
-        <li>give the admin site a name of its own, not a household address or Seerr's;</li>
-        <li>keep it on your LAN, or put it behind an identity-aware gate, a VPN or an IP allowlist at your proxy (see the <a href="/docs/reverse-proxy/#examples">proxy examples</a>);</li>
-        <li>in 3.x, forward only household names to JellyPass from the internet: any other name reaching it is answered as the admin site.</li>
+        <li>keep it on this machine or your LAN, and never publish it on a public address or route a public hostname to it;</li>
+        <li>if you proxy it for HTTPS, give it a host of its own, not a household address or Seerr's, behind an identity-aware gate, a VPN or an IP allowlist (see <a href="/docs/reverse-proxy/#admin">Reaching the admin site</a>);</li>
+        <li>keep Seerr's webhook on the private network, too.</li>
       </ul>
+
+      <h2 id="one-tap">Household addresses and one-tap sign-in</h2>
+
+      <div class="callout warning">
+        <p><strong>With one-tap sign-in, anyone who can reach that household's address can pick a visible passwordless member and act as them.</strong> Use it only where everyone who can reach the address may do that. See <a href="/docs/households/#one-tap">One-tap sign-in</a>.</p>
+        <p><strong>Hiding a profile is no protection for a passwordless account.</strong> A hidden member also accepts an empty password when someone types their name, so knowing or guessing a hidden member's name is enough to sign in as them. The mark only changes the profile picker: any member with no Jellyfin password can be signed in this way, marked or not, and only a Jellyfin password protects them.</p>
+        <p><strong>Marking a member does not remove their password.</strong> Marking a member who has a real password breaks only one-tap: tapping their profile fails. They can still sign in by typing their password.</p>
+      </div>
+
+      <p>Otherwise, knowing an address is not authentication. Anyone who can reach an address sees that household's sign-in page, with its visible members' names, and must still sign in as a member who has a password. A token is accepted on a household's address only for that household's members; another household's token gets the same <code>401</code> as an unknown one.</p>
+
+      <p>Household privacy holds only if members can't reach Jellyfin or Seerr directly. The Dashboard's <strong>Run self-check</strong> looks for that, but a check from inside can't prove it: test from a member's network too, including LAN addresses and alternate names.</p>
 
       <h2 id="tokens">Tokens and keys</h2>
 
       <ul>
-        <li>Use different long random values for <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>. If <code>ADMIN_TOKEN</code> is unset, the webhook token also unlocks the admin API.</li>
+        <li>Use different long random values for <code>WEBHOOK_TOKEN</code> and <code>ADMIN_TOKEN</code>. If neither <code>ADMIN_TOKEN</code> nor a setup token exists, the webhook token also unlocks the admin API.</li>
+        <li><strong>The setup token stays the admin token.</strong> On a wizard install without <code>ADMIN_TOKEN</code>, the token in <code>data/admin-token</code> is the bearer token for the admin API, <code>/metrics</code> and the wizard. To rotate it, stop JellyPass, delete <code>admin-token</code> and start it again: it writes a new token and the old one stops working. Or set <code>ADMIN_TOKEN</code>, which wins from the next start, then delete the file.</li>
         <li>Keep Jellyfin, Seerr and TMDB keys out of Git, screenshots and support requests. JellyPass never logs passwords, Jellyfin tokens, the Jellyfin API key or webhook tokens.</li>
-        <li>Send the webhook token in the <code>Authorization</code> header. <code>?token=</code> can appear in logs and is deprecated: 3.x still accepts it, 4.0.0 will not.</li>
+        <li>Send the webhook token in the <code>Authorization</code> header. Query-token webhooks were removed in 4.0.0, because a token in a URL can appear in logs: <code>?token=</code> is refused with <code>400</code>.</li>
       </ul>
 
-      <h2 id="data">The state file</h2>
+      <h2 id="data">The data folder</h2>
 
-      <p>It holds grants, households, Jellyfin user IDs and a catalogue of media names. JellyPass creates it readable by its owner only; keep backups just as private.</p>
+      <p>The state file, <code>grants.json</code>, holds grants, households, Jellyfin user IDs and a catalogue of media names. On a wizard install, <code>settings.json</code> holds your Jellyfin API key, Seerr and TMDB keys and the webhook token, and <code>admin-token</code> holds the admin token. JellyPass creates them readable by their owner only; keep backups just as private.</p>
 
       <h2 id="proxy">Behind the proxy</h2>
 
       <ul>
-        <li>Serve household and admin traffic over HTTPS, and don't publish JellyPass's port directly to untrusted networks.</li>
-        <li>Set <code>TRUSTED_PROXIES</code> to your proxies only.</li>
+        <li>Serve household addresses over HTTPS only, and redirect plain HTTP at the proxy, before anything reaches JellyPass.</li>
+        <li>Don't publish either listener directly to untrusted networks. Only your reverse proxy should reach <code>8787</code>: JellyPass chooses the household from <code>Host</code> and can't tell whether a request came through the proxy.</li>
+        <li>Set <code>TRUSTED_PROXIES</code> to your proxies only. It is required with the household gateway on.</li>
         <li>Keep a separate way to reach Jellyfin as an administrator that doesn't go through a household address.</li>
       </ul>
 
@@ -92,7 +108,7 @@
 
       <h2 id="report">Reporting a vulnerability</h2>
 
-      <p>Please report security problems privately through <a href="https://github.com/nicklongmore86/jellypass/security/advisories/new">GitHub security advisories</a>, not in a public issue. Fixes go to the latest release line; pin a version and read release notes before upgrading.</p>
+      <p>Please report security problems privately through GitHub's private vulnerability reporting: <a href="https://github.com/nicklongmore86/jellypass/security/advisories/new"><strong>Security → Report a vulnerability</strong></a> on the JellyPass repository. Don't open a public issue for an unpatched vulnerability. Fixes go to the latest release line and the main branch; pin a version and read release notes before upgrading.</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/security/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">

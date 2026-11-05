@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Seerr webhook – JellyPass docs</title>
-  <meta name="description" content="Connect Seerr to JellyPass: the webhook URL, authorization header and payload, how to test it, and the request backfill.">
+  <meta name="description" content="Connect Seerr to JellyPass: the setup wizard or by hand, the webhook URL on port 8788, the Authorization header and required payload, how to test it, and the request backfill.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -60,19 +60,21 @@
 
       <p>The requester's Seerr account must be imported from or linked to Jellyfin; a local-only Seerr account has no Jellyfin user to grant. Jellyseerr works too: it uses the same webhook agent and API.</p>
 
-      <h2 id="setup">Set it up</h2>
+      <h2 id="wizard">With the setup wizard</h2>
+
+      <p>The <a href="/docs/installation/#wizard">setup wizard's</a> webhook step makes all the settings below for you, with a token it generates, then has Seerr send a test. If Seerr already has a webhook that differs, whether it is on or off, the wizard shows it and replaces it only after you review and confirm. To run the step again later, choose <strong>Setup</strong> in the admin site's top bar.</p>
+
+      <h2 id="setup">Set it up by hand</h2>
 
       <p>In Seerr, <strong>Settings → Notifications → Webhook</strong>:</p>
 
       <ol>
         <li>Enable the webhook agent.</li>
         <li>Select only <strong>Request Available</strong>.</li>
-        <li>Webhook URL: <code>http://jellypass:8787/webhooks/seerr</code> on a shared Docker network, or JellyPass's address as Seerr reaches it.</li>
-        <li>Authorization header: <code>Bearer <var>your WEBHOOK_TOKEN</var></code>. This is the recommended way to send the token.</li>
+        <li>Webhook URL: <code>http://jellypass:8788/webhooks/seerr</code> on a shared Docker network, or JellyPass's admin listener as Seerr reaches it. Never point it at a household address or port <code>8787</code>.</li>
+        <li>Authorization header: <code>Bearer <var>your WEBHOOK_TOKEN</var></code>. JellyPass reads the token from this header only: since 4.0.0 a URL with <code>?token=</code> is refused with <code>400 webhook_query_token_removed_use_authorization_header</code>, whatever the token.</li>
         <li>JSON payload: paste the template below, in Seerr's own form, and save. Don't write it into Seerr's <code>settings.json</code> by hand: Seerr stores it in its own encoding.</li>
       </ol>
-
-      <p><strong>Deprecated:</strong> putting the token in the URL as <code>?token=<var>your WEBHOOK_TOKEN</var></code> still works in JellyPass 3.x but will be removed in 4.0.0. A token in a URL can end up in logs; if you use it, move it to the Authorization header.</p>
 
       <pre><code>{
   "notificationType": "{{notification_type}}",
@@ -90,28 +92,24 @@
   }
 }</code></pre>
 
-      <p>With <code>SEERR_URL</code> and <code>SEERR_API_KEY</code> set, JellyPass can look the request up itself, so this smaller payload is enough (needed for some Jellyseerr releases that have no Jellyfin ID variables):</p>
-
-      <pre><code>{
-  "notificationType": "{{notification_type}}",
-  "request": { "id": "{{request_id}}" }
-}</code></pre>
+      <p>This whole structure is required, including <code>event</code>, <code>media</code> and <code>request.requestedBy</code>: since 4.0.0 a shorter template is refused with <code>400 webhook_payload_removed_use_current_seerr_template</code>. With <code>SEERR_URL</code> and <code>SEERR_API_KEY</code> set, the Jellyfin IDs in it may be empty (some Jellyseerr releases have no such variables) and JellyPass looks the request up itself.</p>
 
       <p>4K requests need Seerr configured: Seerr's template has no 4K item ID, so JellyPass asks Seerr which item to protect.</p>
 
       <h2 id="test">Test it</h2>
 
-      <p>Use Seerr's <strong>Test</strong> button. A test notification gets <code>202 {"status":"ignored"}</code>, which proves JellyPass is reachable and the token is right, not that the payload is. After a real title arrives, check the admin site's <strong>Grants</strong> tab, or <code>/metrics</code> (with <code>ADMIN_TOKEN</code>):</p>
+      <p>Use Seerr's <strong>Test</strong> button. A test notification gets <code>202 {"status":"ignored"}</code>, which proves JellyPass is reachable, the token is right and the template has the required structure, not that a real availability event can grant access. After a real title arrives, check the admin site's <strong>Grants</strong> tab, or <code>/metrics</code> on port <code>8788</code> (with the admin token):</p>
 
       <ul>
         <li><code>jfa_last_webhook_received_timestamp_seconds</code>: when the last accepted webhook arrived.</li>
         <li><code>jfa_webhooks_total{result="invalid"}</code>: webhooks whose payload was malformed; re-save the payload in Seerr's form.</li>
+        <li><code>jfa_webhooks_total{result="removed_form"}</code>: refused query-token calls with the right token, and authenticated shorter templates. The admin Dashboard warns about these too.</li>
         <li><code>jfa_webhooks_total{result="error"}</code>: valid webhooks JellyPass could not apply; the reason is logged.</li>
       </ul>
 
       <h2 id="backfill">Request backfill</h2>
 
-      <p>Some Seerr releases miss webhooks. The backfill picks up what they missed: set <code>REQUEST_BACKFILL_SINCE</code> to the date you start relying on JellyPass, and it pages through Seerr's requests about five seconds after startup and before each reconciliation. It grants requests that were created on or after that date, approved or completed, available in Jellyfin, and made by a Jellyfin-linked user.</p>
+      <p>Some Seerr releases miss webhooks, and a refused webhook is not retried. The backfill picks up what they missed: it pages through Seerr's requests about five seconds after startup and before each reconciliation, and grants requests that were created on or after its date, approved or completed, available in Jellyfin, and made by a Jellyfin-linked user. The setup wizard sets the date to your install date. To set it yourself, use the date you start relying on JellyPass:</p>
 
       <pre><code>REQUEST_BACKFILL_SINCE=2026-10-01</code></pre>
 
@@ -119,7 +117,7 @@
 
       <h2 id="existing">Titles you already have</h2>
 
-      <p>Seerr does not send a webhook for titles that were available before JellyPass, manual downloads or upgrades. To make those private, select them in the admin site's <strong>Library</strong> tab and assign users or households (up to 500 at a time).</p>
+      <p>Seerr does not send a webhook for titles that were available before JellyPass, titles added outside Seerr, or upgrades. To make those private, select them in the admin site's <strong>Library</strong> tab and assign users or households (up to 500 at a time).</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/seerr-webhook/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">

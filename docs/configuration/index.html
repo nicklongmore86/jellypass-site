@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Settings reference – JellyPass docs</title>
-  <meta name="description" content="Every JellyPass setting: name, whether it is required, its default and what it does.">
+  <meta name="description" content="Every JellyPass setting: name, whether it is required, its default and what it does, with what the setup wizard stores and what is deprecated.">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -56,7 +56,9 @@
     <main id="main" class="docs-main">
       <h1>Settings reference</h1>
 
-      <p>JellyPass reads its settings from environment variables when it starts; with Compose, put them in <code>.env</code>. An invalid value stops startup with a message naming the setting, except <code>LOG_LEVEL</code>: an unrecognised level logs a warning and JellyPass uses <code>info</code>. Booleans take <code>true</code>, <code>false</code>, <code>1</code> or <code>0</code>.</p>
+      <p>JellyPass reads its settings when it starts, from environment variables (with Compose, put them in <code>.env</code>) and from what the <a href="/docs/installation/#wizard">setup wizard</a> stored in <code>settings.json</code>. A variable in the environment always wins, and the wizard shows that setting as locked. "Required" means required from either source: without <code>JELLYFIN_URL</code>, <code>JELLYFIN_API_KEY</code> and <code>WEBHOOK_TOKEN</code>, JellyPass starts in setup mode instead of stopping.</p>
+
+      <p>An invalid value stops startup with a message naming the setting, except <code>LOG_LEVEL</code>: an unrecognised level logs a warning and JellyPass uses <code>info</code>. Booleans take <code>true</code>, <code>false</code>, <code>1</code> or <code>0</code>.</p>
 
       <h2 id="core">Connections and basics</h2>
 
@@ -65,14 +67,17 @@
         <thead><tr><th scope="col">Setting</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
         <tbody>
           <tr><th scope="row"><code>JELLYFIN_URL</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>Jellyfin's base URL as JellyPass reaches it, such as <code>http://jellyfin:8096</code>.</td></tr>
-          <tr><th scope="row"><code>JELLYFIN_API_KEY</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>A Jellyfin administrator API key.</td></tr>
-          <tr><th scope="row"><code>WEBHOOK_TOKEN</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>Secret Seerr's webhook must send. Use a long random value.</td></tr>
-          <tr><th scope="row"><code>ADMIN_TOKEN</code></th><td data-label="Required">Recommended</td><td data-label="Default"><code>WEBHOOK_TOKEN</code></td><td>Bearer token for the admin API and <code>/metrics</code>. If unset, <code>WEBHOOK_TOKEN</code> is used (and a warning logged); use a different value.</td></tr>
+          <tr><th scope="row"><code>JELLYFIN_API_KEY</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>A Jellyfin administrator API key. The setup wizard creates one for you.</td></tr>
+          <tr><th scope="row"><code>WEBHOOK_TOKEN</code></th><td data-label="Required">Yes</td><td data-label="Default">—</td><td>Secret Seerr's webhook must send. Use a long random value. The setup wizard generates one.</td></tr>
+          <tr><th scope="row"><code>ADMIN_TOKEN</code></th><td data-label="Required">Recommended</td><td data-label="Default">the setup token in <code>admin-token</code>, else <code>WEBHOOK_TOKEN</code></td><td>Bearer token for the admin API, <code>/metrics</code> and the setup wizard. Use a value different from <code>WEBHOOK_TOKEN</code>.</td></tr>
           <tr><th scope="row"><code>SEERR_URL</code></th><td data-label="Required">Set together</td><td data-label="Default">—</td><td>Seerr's base URL as JellyPass reaches it, such as <code>http://seerr:5055</code>.</td></tr>
           <tr><th scope="row"><code>SEERR_API_KEY</code></th><td data-label="Required">Set together</td><td data-label="Default">—</td><td>Seerr API key. Startup stops if only one of the two is set.</td></tr>
           <tr><th scope="row"><code>STATE_FILE</code></th><td data-label="Required">No</td><td data-label="Default"><code>./data/grants.json</code></td><td>The state file. The Compose file sets <code>/app/data/grants.json</code>.</td></tr>
-          <tr><th scope="row"><code>HOST</code></th><td data-label="Required">No</td><td data-label="Default"><code>0.0.0.0</code></td><td>Listen address inside the container.</td></tr>
-          <tr><th scope="row"><code>PORT</code></th><td data-label="Required">No</td><td data-label="Default"><code>8787</code></td><td>Listen port.</td></tr>
+          <tr><th scope="row"><code>SETTINGS_FILE</code></th><td data-label="Required">No</td><td data-label="Default"><code>settings.json</code> next to <code>STATE_FILE</code></td><td>Where the setup wizard stores its settings (mode <code>0600</code>; it holds keys and the webhook token). <code>admin-token</code> is kept in the same folder. Never created on an install the wizard hasn't been used on.</td></tr>
+          <tr><th scope="row"><code>ADMIN_HOST</code></th><td data-label="Required">No</td><td data-label="Default"><code>127.0.0.1</code>; <code>0.0.0.0</code> in the image</td><td>Admin listener address. Compose publishes it on <code>127.0.0.1</code> only. Keep it private.</td></tr>
+          <tr><th scope="row"><code>ADMIN_PORT</code></th><td data-label="Required">No</td><td data-label="Default"><code>8788</code></td><td>Admin listener port: the admin site and API, <code>/metrics</code>, <code>/webhooks/seerr</code> and <code>/health</code>. Must differ from <code>PORT</code> while the household gateway is on.</td></tr>
+          <tr><th scope="row"><code>HOST</code></th><td data-label="Required">No</td><td data-label="Default"><code>0.0.0.0</code></td><td>Member listener address.</td></tr>
+          <tr><th scope="row"><code>PORT</code></th><td data-label="Required">No</td><td data-label="Default"><code>8787</code></td><td>Member listener port: household addresses only. It starts only with the household gateway on.</td></tr>
           <tr><th scope="row"><code>RECONCILE_INTERVAL_SECONDS</code></th><td data-label="Required">No</td><td data-label="Default"><code>300</code></td><td>How often tags and policies are re-applied and retried. <code>0</code> disables; at most <code>86400</code>.</td></tr>
           <tr><th scope="row"><code>CATALOG_SYNC_INTERVAL_SECONDS</code></th><td data-label="Required">No</td><td data-label="Default"><code>3600</code></td><td>How often the Library catalogue is refreshed from Jellyfin. <code>0</code> disables; at most <code>604800</code>.</td></tr>
         </tbody>
@@ -85,17 +90,18 @@
       <table class="settings">
         <thead><tr><th scope="col">Setting</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
         <tbody>
-          <tr><th scope="row"><code>HOUSEHOLD_DOMAIN</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Turns on household addresses below this domain.</td></tr>
-          <tr><th scope="row"><code>HOUSEHOLD_HOST_PREFIX</code></th><td data-label="Required">No</td><td data-label="Default"><code>jelly-</code></td><td>Put before each household ID: an address is <code>&lt;prefix&gt;&lt;household&gt;.&lt;domain&gt;</code>. 1 to 32 lowercase letters, digits and hyphens.</td></tr>
-          <tr><th scope="row"><code>HOUSEHOLD_APP_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>false</code></td><td>Serves the household web app at <code>/jellypass/app/</code> and its API, used by every JellyPass app. Needs <code>HOUSEHOLD_DOMAIN</code>, Seerr and <code>TMDB_API_KEY</code>. While on, at most 100 households.</td></tr>
+          <tr><th scope="row"><code>HOUSEHOLD_GATEWAY_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>true</code> with <code>HOUSEHOLD_DOMAIN</code>, otherwise <code>false</code></td><td>Starts the member listener, which serves each household at the addresses you map to it. Needs <code>TRUSTED_PROXIES</code>.</td></tr>
+          <tr><th scope="row"><code>HOUSEHOLD_APP_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>false</code></td><td>Serves the household web app at <code>/jellypass/app/</code> and its API, used by every JellyPass app. Needs the household gateway, Seerr and <code>TMDB_API_KEY</code>. While on, at most 100 households.</td></tr>
           <tr><th scope="row"><code>TMDB_API_KEY</code></th><td data-label="Required">With the app</td><td data-label="Default">—</td><td>TMDB v3 API key (32 hexadecimal characters) or v4 read access token. Checked at startup, never logged. Use a key for JellyPass alone.</td></tr>
-          <tr><th scope="row"><code>TV_ADDON_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>false</code></td><td>Adds the TV add-on to Jellyfin web on the households in <code>TV_ADDON_HOUSEHOLDS</code>. Needs <code>HOUSEHOLD_APP_ENABLED</code>.</td></tr>
-          <tr><th scope="row"><code>TV_ADDON_HOUSEHOLDS</code></th><td data-label="Required">With the add-on</td><td data-label="Default">—</td><td>Household IDs separated by commas, or <code>*</code> for all.</td></tr>
+          <tr><th scope="row"><code>TV_ADDON_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>false</code></td><td>The global gate for the experimental TV add-on. Each household's TV switch then decides who gets it. Needs <code>HOUSEHOLD_APP_ENABLED</code>.</td></tr>
+          <tr><th scope="row"><code>HOUSEHOLD_PLUGIN_ROUTES</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Exact lowercase plugin paths, separated by commas, added to the household allow-list. No wildcards. Plugin routes can reveal other households' data: audit each one before adding it.</td></tr>
           <tr><th scope="row"><code>WS_IDLE_TIMEOUT_MS</code></th><td data-label="Required">No</td><td data-label="Default"><code>300000</code></td><td>Closes a household WebSocket after this long with no traffic either way. <code>0</code> disables.</td></tr>
           <tr><th scope="row"><code>WS_UPSTREAM_IDLE_TIMEOUT_MS</code></th><td data-label="Required">No</td><td data-label="Default"><code>180000</code></td><td>Closes a household WebSocket after this long with nothing from Jellyfin. <code>0</code> disables.</td></tr>
         </tbody>
       </table>
       </div>
+
+      <p>Which addresses a household has, and whether it has app and TV access, are not settings: you set them per household in the admin site. See <a href="/docs/households/#addresses">Household addresses</a> and <a href="/docs/households/#switches">App and TV switches</a>.</p>
 
       <h2 id="other">Backfill, proxies and the rest</h2>
 
@@ -103,10 +109,12 @@
       <table class="settings">
         <thead><tr><th scope="col">Setting</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
         <tbody>
+          <tr><th scope="row"><code>TRUSTED_PROXIES</code></th><td data-label="Required">With the gateway</td><td data-label="Default">empty</td><td>Reverse proxies whose <code>X-Forwarded-For</code> is believed: IPv4/IPv6 addresses and CIDR ranges separated by commas, no ports. Startup stops without it while the household gateway is on. See <a href="/docs/reverse-proxy/#trusted-proxies">Reverse proxy</a>.</td></tr>
           <tr><th scope="row"><code>REQUEST_BACKFILL_SINCE</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Turns on the <a href="/docs/seerr-webhook/#backfill">request backfill</a> for requests created on or after this date: <code>YYYY-MM-DD</code> (UTC midnight) or an ISO 8601 date-time with <code>Z</code> or an offset.</td></tr>
           <tr><th scope="row"><code>REQUEST_BACKFILL_ENABLED</code></th><td data-label="Required">No</td><td data-label="Default"><code>true</code> when the date is set</td><td>Set <code>false</code> to pause the backfill. Needs Seerr and the date.</td></tr>
-          <tr><th scope="row"><code>TRUSTED_PROXIES</code></th><td data-label="Required">No</td><td data-label="Default">empty</td><td>Reverse proxies whose <code>X-Forwarded-For</code> is believed: IPv4/IPv6 addresses and CIDR ranges separated by commas, no ports. See <a href="/docs/reverse-proxy/#trusted-proxies">Reverse proxy</a>.</td></tr>
-          <tr><th scope="row"><code>JELLYFIN_UNTESTED_VERSION_OK</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>One exact Jellyfin version outside the supported releases, such as <code>13.0.0</code>, that counts as confirmed, so JellyPass doesn't warn about it (and, from 4.0.0, household addresses serve on it). New in 3.10.0.</td></tr>
+          <tr><th scope="row"><code>JELLYFIN_UNTESTED_VERSION_OK</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>One exact Jellyfin version outside the supported releases, such as <code>13.0.0</code>, that counts as confirmed, so household addresses serve on it. See <a href="/docs/upgrading/#jellyfin-versions">Jellyfin versions</a>.</td></tr>
+          <tr><th scope="row"><code>JELLYFIN_PUBLIC_URLS</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Jellyfin's public URLs, separated by commas, for the self-check's direct-access probes.</td></tr>
+          <tr><th scope="row"><code>SEERR_PUBLIC_URL</code></th><td data-label="Required">No</td><td data-label="Default">—</td><td>Seerr's public URL, for the self-check. Seerr should be reachable by administrators only.</td></tr>
           <tr><th scope="row"><code>LOG_LEVEL</code></th><td data-label="Required">No</td><td data-label="Default"><code>info</code></td><td><code>debug</code>, <code>info</code>, <code>warn</code> or <code>error</code>. Only <code>debug</code> changes output today (routine disconnects and skipped backfill items).</td></tr>
           <tr><th scope="row"><code>JELLYPASS_IMAGE</code></th><td data-label="Required">Compose only</td><td data-label="Default"><code>…/jellypass:latest</code></td><td>The image the Compose file runs. Pin a version.</td></tr>
           <tr><th scope="row"><code>JELLYPASS_ENV_FILE</code></th><td data-label="Required">Compose only</td><td data-label="Default"><code>.env</code></td><td>Another settings file for the Compose file.</td></tr>
@@ -114,7 +122,25 @@
       </table>
       </div>
 
+      <h2 id="deprecated">Deprecated and legacy settings</h2>
+
+      <p>These keep working for existing installs. Don't use them on a new one.</p>
+
+      <div class="table-scroll">
+      <table class="settings">
+        <thead><tr><th scope="col">Setting</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>TV_ADDON_HOUSEHOLDS</code></th><td data-label="Required">Deprecated</td><td data-label="Default">—</td><td>Household IDs separated by commas, or <code>*</code> for all, including ones created later. While set with <code>TV_ADDON_ENABLED=true</code> it decides TV access at every start and locks the admin site's TV switches. Remove it and restart to manage TV access with the switches, which keep what it last selected.</td></tr>
+          <tr><th scope="row"><code>HOUSEHOLD_DOMAIN</code></th><td data-label="Required">Legacy</td><td data-label="Default">—</td><td>For installs from before 4.0.0: gives every household the extra address <code>https://&lt;prefix&gt;&lt;household&gt;.&lt;domain&gt;</code> and turns the gateway on. Leave it empty on a new install.</td></tr>
+          <tr><th scope="row"><code>HOUSEHOLD_HOST_PREFIX</code></th><td data-label="Required">Legacy</td><td data-label="Default"><code>jelly-</code></td><td>The prefix of those addresses, only with <code>HOUSEHOLD_DOMAIN</code>. 1 to 32 lowercase letters, digits and hyphens.</td></tr>
+          <tr><th scope="row"><code>LEGACY_WEBHOOK_ON_MEMBER_PORT</code></th><td data-label="Required">Upgrade aid</td><td data-label="Default"><code>false</code></td><td>Also answers <code>POST /webhooks/seerr</code> on the member listener for a host that is no household's, so a 3.x webhook URL keeps working while you change it. Logs a warning at startup. Turn it off afterwards.</td></tr>
+        </tbody>
+      </table>
+      </div>
+
       <h2 id="minimal">A minimal <code>.env</code></h2>
+
+      <p>With the setup wizard, all you need is the pinned image. Without the wizard, for household addresses and the apps, use the example below after replacing every placeholder with your own value and <code>192.0.2.10</code>, a documentation address, with your proxy's. JellyPass checks some values at startup: a literal <code>TMDB_API_KEY=tmdb-key</code>, for one, stops it.</p>
 
       <pre><code>JELLYPASS_IMAGE=ghcr.io/nicklongmore86/jellypass:<var>X.Y.Z</var>
 JELLYFIN_URL=http://jellyfin:8096
@@ -125,12 +151,12 @@ WEBHOOK_TOKEN=<var>long-random-secret</var>
 ADMIN_TOKEN=<var>different-long-random-secret</var>
 
 # Household addresses and the apps
-HOUSEHOLD_DOMAIN=example.com
+HOUSEHOLD_GATEWAY_ENABLED=true
 HOUSEHOLD_APP_ENABLED=true
 TMDB_API_KEY=<var>tmdb-key</var>
-TRUSTED_PROXIES=192.168.1.5</code></pre>
+TRUSTED_PROXIES=192.0.2.10</code></pre>
 
-      <p>The example settings file, <a href="https://github.com/nicklongmore86/jellypass/blob/main/.env.example"><code>.env.example</code></a>, lists the same settings with comments. The <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/server-reference.md">server reference</a> has every setting in full detail, with the administrator API and metrics.</p>
+      <p>The example settings file, <a href="https://github.com/nicklongmore86/jellypass/blob/main/.env.example"><code>.env.example</code></a>, lists the main settings with comments. The <a href="https://github.com/nicklongmore86/jellypass/blob/main/docs/server-reference.md#configuration">server reference</a> has every setting in full detail, with the administrator API and metrics.</p>
 
       <p class="edit-link"><a href="https://github.com/nicklongmore86/jellypass-site/edit/main/docs/configuration/index.html">Edit this page on GitHub</a></p>
       <nav class="pager" aria-label="Previous and next page">
