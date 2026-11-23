@@ -56,7 +56,7 @@
     <main id="main" class="docs-main">
       <h1>Phone, web and TV apps</h1>
 
-      <p>Members browse what's new, see what their household already has, tap <strong>Get this</strong> and follow <strong>My requests</strong>. Every app signs in with Jellyfin and sends your sign-in, searches and requests only to the household's own address; the one exception is artwork: posters, backdrops and logos load straight from TMDB's image server (<code>image.tmdb.org</code>), which sees your IP address and which images were loaded but no account details (see the <a href="/privacy/">privacy policy</a>). All of them need the household app API switched on, which the setup wizard can do, or:</p>
+      <p>Members browse what's new, see what their household already has, tap <strong>Request</strong> and follow <strong>My requests</strong>. Every app signs in with Jellyfin and sends your sign-in, searches and requests only to the household's own address; the one exception is artwork: posters, backdrops and logos load straight from TMDB's image server (<code>image.tmdb.org</code>), which sees your IP address and which images were loaded but no account details (see the <a href="/privacy/">privacy policy</a>). All of them need the household app API switched on, which the setup wizard can do, or:</p>
 
       <pre><code>HOUSEHOLD_APP_ENABLED=true
 TMDB_API_KEY=<var>tmdb-key</var></code></pre>
@@ -87,7 +87,7 @@ TMDB_API_KEY=<var>tmdb-key</var></code></pre>
 
       <h2 id="tv">TV add-on (experimental)</h2>
 
-      <p>The TV add-on adds JellyPass to Jellyfin web's own interface on chosen households' addresses: a <strong>Discover</strong> page behind a compass button in Jellyfin's header, with a link to <strong>My requests</strong>, a Discover row on Search, and title pages with <strong>Play</strong> and <strong>Get this</strong>. It adds nothing to Jellyfin's Home screen. It is experimental and off by default, and it depends on Jellyfin web's page structure, so it is matched to Jellyfin web 12.x and 10.11.x only.</p>
+      <p>The TV add-on adds JellyPass to Jellyfin web's own interface on chosen households' addresses: a <strong>Discover</strong> page behind a compass button in Jellyfin's header, with a link to <strong>My requests</strong>, a Discover row on Search, and title pages with <strong>Play</strong> and <strong>Request</strong>. It adds nothing to Jellyfin's Home screen. It is experimental and off by default, and it depends on Jellyfin web's page structure, so it is matched to Jellyfin web 12.x and 10.11.x only.</p>
 
       <p>Turn on the global gate, then switch on one household first with its <strong>TV add-on injection</strong> switch in <strong>Groups</strong>, and check it on your TV before adding others. Other households are unchanged. Members must add the household address (not your LAN address or main Jellyfin address) as their server.</p>
 
