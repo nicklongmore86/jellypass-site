@@ -103,7 +103,7 @@ curl http://127.0.0.1:8788/health</code></pre></li>
         <li>In Seerr, change the webhook URL's port to <code>8788</code>, save and press <strong>Test</strong>. Then remove <code>LEGACY_WEBHOOK_ON_MEMBER_PORT</code> and recreate the container once more.</li>
       </ol>
 
-      <p>Existing addresses such as <code>https://jelly-grove.example.com</code> keep working as long as <code>HOUSEHOLD_DOMAIN</code> is set. The state file moves to schema 8, which 3.x can't read. The add-to-library page is gone; members use <strong>Get this</strong>.</p>
+      <p>Existing addresses such as <code>https://jelly-grove.example.com</code> keep working as long as <code>HOUSEHOLD_DOMAIN</code> is set. The state file moves to schema 8, which 3.x can't read. The add-to-library page is gone; members use <strong>Request</strong> (called <strong>Get this</strong> before 4.6.0).</p>
 
       <h2 id="rollback">Roll back</h2>
 
